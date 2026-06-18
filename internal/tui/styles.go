@@ -42,6 +42,15 @@ func glyph(h model.Health) string {
 	return lipgloss.NewStyle().Foreground(healthColor(h)).Render(pad(h.Glyph(), 4))
 }
 
+// visGlyph is a 1-char visibility marker: a highlighted "P" for public repos,
+// a dim dot for private (the common case) — small and unobtrusive.
+func visGlyph(private bool) string {
+	if private {
+		return styleDim.Render("·")
+	}
+	return lipgloss.NewStyle().Foreground(colYellow).Bold(true).Render("P")
+}
+
 // ciStyled colors a CI short label.
 func ciStyled(c model.CIState) string {
 	col := colGray

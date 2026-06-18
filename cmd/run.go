@@ -57,8 +57,12 @@ func renderText(w *os.File, st *model.State) error {
 		fmt.Fprintf(w, "\n%s\n", label)
 		fmt.Fprintln(tw, "  HEALTH\tREPO\tCI\tSHA\tTAG\tDEP(C/H/M/L)\tCODE\tSECRET\tUNDEP\tPR(bot/hum)")
 		for _, r := range o.Repos {
+			name := r.Name
+			if !r.Private {
+				name += " (pub)"
+			}
 			fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\t%d/%d/%d/%d\t%s\t%s\t%s\t%d/%d\n",
-				r.Health.Glyph(), r.Name, r.CI.Short(), r.ShortSHA, tagOrDash(r.LatestTag),
+				r.Health.Glyph(), name, r.CI.Short(), r.ShortSHA, tagOrDash(r.LatestTag),
 				r.Dependabot.Critical, r.Dependabot.High, r.Dependabot.Moderate, r.Dependabot.Low,
 				scanCell(r.CodeScanEnabled, r.CodeScanning), scanCell(r.SecretScanEnabled, r.SecretScanning),
 				r.UndeployedLabel(), r.PRs.Bot, r.PRs.Human)

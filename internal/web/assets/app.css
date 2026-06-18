@@ -13,6 +13,7 @@ h2 { font-size: 1rem; margin: 1.6rem 0 .4rem; border-bottom: 1px solid var(--lin
 .muted { color: var(--muted); font-weight: normal; }
 .warn { color: var(--yellow); }
 .ghas { color: var(--yellow); font-weight: normal; font-size: .85em; }
+.pub { color: var(--bg); background: var(--yellow); font-size: .72em; padding: 0 .3em; border-radius: 3px; vertical-align: middle; }
 /* One table for all orgs + fixed layout => columns align across every org. */
 table { border-collapse: collapse; width: 100%; table-layout: fixed; }
 th, td { text-align: left; padding: .2rem .6rem .2rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

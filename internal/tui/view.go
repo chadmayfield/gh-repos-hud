@@ -80,8 +80,8 @@ func scrollIndicator(start, end, total int) string {
 }
 
 func headerRow() string {
-	return fmt.Sprintf("%s %s %s %s %s %s %s %s %s %s",
-		pad("", 4), pad("REPO", 26), pad("CI", 4), pad("SHA", 8), pad("TAG", 11),
+	return fmt.Sprintf("%s %s %s %s %s %s %s %s %s %s %s",
+		pad("", 4), pad("", 1), pad("REPO", 26), pad("CI", 4), pad("SHA", 8), pad("TAG", 11),
 		pad("DEP C/H/M/L", 11), pad("CODE", 4), pad("SEC", 4), pad("UNDEP", 8), pad("PR b/h", 7))
 }
 
@@ -120,8 +120,8 @@ func (m Model) orgLine(oi int) string {
 func repoLine(r model.Repo) string {
 	dep := fmt.Sprintf("%d/%d/%d/%d", r.Dependabot.Critical, r.Dependabot.High, r.Dependabot.Moderate, r.Dependabot.Low)
 	pr := fmt.Sprintf("%d/%d", r.PRs.Bot, r.PRs.Human)
-	return fmt.Sprintf("%s %s %s %s %s %s %s %s %s %s",
-		glyph(r.Health), pad(r.Name, 26), ciStyled(r.CI), pad(r.ShortSHA, 8),
+	return fmt.Sprintf("%s %s %s %s %s %s %s %s %s %s %s",
+		glyph(r.Health), visGlyph(r.Private), pad(r.Name, 26), ciStyled(r.CI), pad(r.ShortSHA, 8),
 		pad(dashIfEmpty(r.LatestTag), 11), pad(dep, 11),
 		pad(scanCell(r.CodeScanEnabled, r.CodeScanning), 4),
 		pad(scanCell(r.SecretScanEnabled, r.SecretScanning), 4),
@@ -224,7 +224,7 @@ func (m Model) footer() string {
 		lipgloss.NewStyle().Foreground(colYellow).Render("[~] attention") + "  " +
 		lipgloss.NewStyle().Foreground(colRed).Render("[!!] CI-fail or crit/high") + "  " +
 		styleDim.Render("[?] unknown")
-	cols := "cols: DEP=crit/high/mod/low   UNDEP=commits since last tag   PR=bot/human   CODE/SEC=scan alerts (? = off)"
+	cols := "cols: P=public repo   DEP=crit/high/mod/low   UNDEP=commits since last tag   PR=bot/human   CODE/SEC=scan alerts (? = off)"
 	keys := "j/k move   space/pgdn page   g/G top/bottom   enter drill   tab fold   / filter   s sort   a attn   o open   r refresh   q quit"
 	return styleFooter.Render("  ") + strings.Join(parts, "   ") + "\n" +
 		"  " + legend + "\n" +
