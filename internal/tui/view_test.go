@@ -15,7 +15,7 @@ func sampleState() *model.State {
 			Repos: []model.Repo{
 				{Name: "acme-status-page", ShortSHA: "f6c3ac1", LatestTag: "v0.1.0", CI: model.CISuccess,
 					Dependabot: model.AlertCounts{High: 1, Moderate: 1, Low: 1}, Health: model.HealthRed,
-					CodeScanEnabled: true, SecretScanEnabled: true, Undeployed: 0},
+					CodeScan: model.ScanOn, SecretScan: model.ScanOn, Undeployed: 0},
 				{Name: "acme-app", ShortSHA: "0df2c22", CI: model.CISuccess, Untagged: true, Health: model.HealthGreen},
 			},
 		}},

@@ -123,8 +123,8 @@ func repoLine(r model.Repo) string {
 	return fmt.Sprintf("%s %s %s %s %s %s %s %s %s %s %s",
 		glyph(r.Health), visGlyph(r.Private), pad(r.Name, 26), ciStyled(r.CI), pad(r.ShortSHA, 8),
 		pad(dashIfEmpty(r.LatestTag), 11), pad(dep, 11),
-		pad(scanCell(r.CodeScanEnabled, r.CodeScanning), 4),
-		pad(scanCell(r.SecretScanEnabled, r.SecretScanning), 4),
+		pad(r.CodeScan.Cell(r.CodeScanning), 4),
+		pad(r.SecretScan.Cell(r.SecretScanning), 4),
 		pad(r.UndeployedLabel(), 8), pad(pr, 7))
 }
 
@@ -147,8 +147,8 @@ func (m Model) viewDetail() string {
 	fmt.Fprintf(&b, "  undeployed    %s\n", undep)
 	fmt.Fprintf(&b, "  dependabot    crit=%d high=%d mod=%d low=%d  (enabled=%v)\n",
 		r.Dependabot.Critical, r.Dependabot.High, r.Dependabot.Moderate, r.Dependabot.Low, r.DependabotEnabled)
-	fmt.Fprintf(&b, "  code scan     %s\n", scanCell(r.CodeScanEnabled, r.CodeScanning))
-	fmt.Fprintf(&b, "  secret scan   %s\n", scanCell(r.SecretScanEnabled, r.SecretScanning))
+	fmt.Fprintf(&b, "  code scan     %s (%s)\n", r.CodeScan.Cell(r.CodeScanning), r.CodeScan)
+	fmt.Fprintf(&b, "  secret scan   %s (%s)\n", r.SecretScan.Cell(r.SecretScanning), r.SecretScan)
 	fmt.Fprintf(&b, "  open PRs      total=%d  bot=%d human=%d  mergeable=%d ci-green=%d draft=%d\n",
 		r.PRs.Total, r.PRs.Bot, r.PRs.Human, r.PRs.Mergeable, r.PRs.CIGreen, r.PRs.Draft)
 	// Lazily-loaded alert + PR lists.
@@ -224,7 +224,7 @@ func (m Model) footer() string {
 		lipgloss.NewStyle().Foreground(colYellow).Render("[~] attention") + "  " +
 		lipgloss.NewStyle().Foreground(colRed).Render("[!!] CI-fail or crit/high") + "  " +
 		styleDim.Render("[?] unknown")
-	cols := "cols: P=public repo   DEP=crit/high/mod/low   UNDEP=commits since last tag   PR=bot/human   CODE/SEC=scan alerts (? = off)"
+	cols := "cols: P=public repo   DEP=crit/high/mod/low   UNDEP=commits since last tag   PR=bot/human   CODE/SEC=open scan alerts (off=not enabled, ?=undetermined)"
 	keys := "j/k move   space/pgdn page   g/G top/bottom   enter drill   tab fold   / filter   s sort   a attn   o open   r refresh   q quit"
 	return styleFooter.Render("  ") + strings.Join(parts, "   ") + "\n" +
 		"  " + legend + "\n" +
@@ -248,11 +248,4 @@ func dashIfEmpty(s string) string {
 		return "-"
 	}
 	return s
-}
-
-func scanCell(enabled bool, n int) string {
-	if !enabled {
-		return "?"
-	}
-	return fmt.Sprintf("%d", n)
 }

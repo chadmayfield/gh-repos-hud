@@ -23,7 +23,7 @@ func testServer(t *testing.T) *Server {
 			Repos: []model.Repo{
 				{Name: "acme-status-page", URL: "https://github.com/acme/x", ShortSHA: "f6c3ac1",
 					LatestTag: "v0.1.0", CI: model.CISuccess, Health: model.HealthRed,
-					Dependabot: model.AlertCounts{High: 1}, CodeScanEnabled: true, SecretScanEnabled: true},
+					Dependabot: model.AlertCounts{High: 1}, CodeScan: model.ScanOn, SecretScan: model.ScanOn},
 			},
 		}},
 		RateLimit: model.RateLimit{RESTRemaining: 4966, RESTLimit: 5000},

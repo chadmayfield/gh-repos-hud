@@ -3,6 +3,8 @@ package web
 import (
 	"embed"
 	"html/template"
+
+	"github.com/chadmayfield/gh-repos-hud/internal/model"
 )
 
 //go:embed templates/index.html.tmpl
@@ -18,27 +20,7 @@ var tmplFuncs = template.FuncMap{
 		}
 		return s
 	},
-	"scan": func(enabled bool, n int) string {
-		if !enabled {
-			return "?"
-		}
-		if n == 0 {
-			return "0"
-		}
-		return itoa(n)
+	"scan": func(s model.ScanState, n int) string {
+		return s.Cell(n)
 	},
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var buf [20]byte
-	i := len(buf)
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	return string(buf[i:])
 }

@@ -68,10 +68,15 @@ func fixtureServer() *httptest.Server {
 		}
 		io.WriteString(w, orgRepoGQL)
 	})
-	mux.HandleFunc("/orgs/org1/code-scanning/alerts", func(w http.ResponseWriter, _ *http.Request) { io.WriteString(w, `[]`) })
-	mux.HandleFunc("/orgs/org1/secret-scanning/alerts", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusForbidden) // disabled -> should degrade to a warning
-		io.WriteString(w, `{"message":"secret scanning disabled"}`)
+	// Per-repo scan probes: a 200 means enabled (count = page length), a 404
+	// means not enabled. code-scanning is on with one open alert; secret-
+	// scanning is off.
+	mux.HandleFunc("/repos/org1/repo1/code-scanning/alerts", func(w http.ResponseWriter, _ *http.Request) {
+		io.WriteString(w, `[{}]`) // one open alert -> ScanOn, count 1
+	})
+	mux.HandleFunc("/repos/org1/repo1/secret-scanning/alerts", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound) // not enabled -> ScanOff (not a warning)
+		io.WriteString(w, `{"message":"Secret scanning is disabled on this repository."}`)
 	})
 	mux.HandleFunc("/orgs/org1/settings/billing/advanced-security", func(w http.ResponseWriter, _ *http.Request) {
 		io.WriteString(w, `{"total_advanced_security_committers":0}`)
@@ -125,14 +130,17 @@ func TestFetchStateMerge(t *testing.T) {
 	if st.RateLimit.GraphQLCost != 4 {
 		t.Errorf("GraphQLCost = %d, want 4", st.RateLimit.GraphQLCost)
 	}
-	// Secret-scanning 403 degraded to a warning, not a failure.
-	foundWarn := false
-	for _, w := range st.Warnings {
-		if w.Feature == "secret-scanning" {
-			foundWarn = true
-		}
+	// Per-repo scan probes resolve the tri-state: code-scanning on (1 alert),
+	// secret-scanning off. "Off" is a normal state, not a degradation warning.
+	if r.CodeScan != model.ScanOn || r.CodeScanning != 1 {
+		t.Errorf("code scan = %v count=%d, want on/1", r.CodeScan, r.CodeScanning)
 	}
-	if !foundWarn {
-		t.Errorf("expected a secret-scanning degradation warning; warnings=%+v", st.Warnings)
+	if r.SecretScan != model.ScanOff || r.SecretScanning != 0 {
+		t.Errorf("secret scan = %v count=%d, want off/0", r.SecretScan, r.SecretScanning)
+	}
+	for _, w := range st.Warnings {
+		if w.Feature == "secret-scanning" || w.Feature == "code-scanning" {
+			t.Errorf("per-repo scan status should not emit a %q warning; got %+v", w.Feature, w)
+		}
 	}
 }

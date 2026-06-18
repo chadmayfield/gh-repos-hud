@@ -64,7 +64,7 @@ func renderText(w *os.File, st *model.State) error {
 			fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\t%d/%d/%d/%d\t%s\t%s\t%s\t%d/%d\n",
 				r.Health.Glyph(), name, r.CI.Short(), r.ShortSHA, tagOrDash(r.LatestTag),
 				r.Dependabot.Critical, r.Dependabot.High, r.Dependabot.Moderate, r.Dependabot.Low,
-				scanCell(r.CodeScanEnabled, r.CodeScanning), scanCell(r.SecretScanEnabled, r.SecretScanning),
+				r.CodeScan.Cell(r.CodeScanning), r.SecretScan.Cell(r.SecretScanning),
 				r.UndeployedLabel(), r.PRs.Bot, r.PRs.Human)
 		}
 		tw.Flush()
@@ -94,11 +94,4 @@ func tagOrDash(t string) string {
 		return "-"
 	}
 	return t
-}
-
-func scanCell(enabled bool, n int) string {
-	if !enabled {
-		return "?"
-	}
-	return fmt.Sprintf("%d", n)
 }

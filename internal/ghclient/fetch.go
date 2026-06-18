@@ -105,32 +105,11 @@ func (c *Client) fetchOwner(ctx context.Context, o ownerRef, opts Options) (mode
 	}
 
 	var warns []model.Warning
-	var codeCounts, secretCounts map[string]int
-	codeAvail, secretAvail := false, false
 	var billing model.Billing
 
-	// Org-level scanning + billing don't exist for the personal account.
+	// Billing is an org-only, admin-only signal (it doesn't exist for the
+	// personal account). Per-repo scan status, below, is queried for both.
 	if !o.IsUser {
-		if m, err := c.codeScanCounts(ctx, o.Name); err != nil {
-			if errors.Is(err, errFeatureUnavailable) {
-				warns = append(warns, model.Warning{Owner: o.Name, Feature: "code-scanning", Reason: "disabled or no access"})
-			} else {
-				return model.Owner{}, nil, 0, err
-			}
-		} else {
-			codeCounts, codeAvail = m, true
-		}
-
-		if m, err := c.secretScanCounts(ctx, o.Name); err != nil {
-			if errors.Is(err, errFeatureUnavailable) {
-				warns = append(warns, model.Warning{Owner: o.Name, Feature: "secret-scanning", Reason: "disabled or no access"})
-			} else {
-				return model.Owner{}, nil, 0, err
-			}
-		} else {
-			secretCounts, secretAvail = m, true
-		}
-
 		if b, err := c.billing(ctx, o.Name); err != nil {
 			if errors.Is(err, errFeatureUnavailable) {
 				warns = append(warns, model.Warning{Owner: o.Name, Feature: "billing", Reason: "no GHAS or not an admin"})
@@ -150,7 +129,38 @@ func (c *Client) fetchOwner(ctx context.Context, o ownerRef, opts Options) (mode
 		if opts.ExcludeArchived && n.IsArchived {
 			continue
 		}
-		owner.Repos = append(owner.Repos, buildRepo(n, codeCounts[n.Name], secretCounts[n.Name], codeAvail, secretAvail))
+		owner.Repos = append(owner.Repos, buildRepo(n))
+	}
+
+	// Per-repo code/secret scan probes, concurrently. This is the accurate
+	// signal — the same query for personal and org repos — that distinguishes
+	// "enabled & clean" (0) from "not enabled" (off) from "couldn't tell" (?),
+	// which the old org-aggregate could not. Two REST calls per repo; failures
+	// degrade to off/? rather than failing the owner. SetLimit caps the burst
+	// so a 60-repo owner doesn't trip GitHub's secondary (concurrency) limit.
+	sg := new(errgroup.Group)
+	sg.SetLimit(8)
+	for i := range owner.Repos {
+		r := &owner.Repos[i]
+		sg.Go(func() error {
+			r.CodeScan, r.CodeScanning = c.repoScanState(ctx, o.Name, r.Name, "code-scanning")
+			return nil
+		})
+		sg.Go(func() error {
+			r.SecretScan, r.SecretScanning = c.repoScanState(ctx, o.Name, r.Name, "secret-scanning")
+			return nil
+		})
+	}
+	_ = sg.Wait()
+
+	// Roll up health now that scan counts exist (ComputeHealth factors open
+	// scan alerts into yellow), and stamp the JSON status names.
+	for i := range owner.Repos {
+		r := &owner.Repos[i]
+		r.CodeScanName = r.CodeScan.String()
+		r.SecretScanName = r.SecretScan.String()
+		r.Health = model.ComputeHealth(*r)
+		r.HealthName = r.Health.String()
 	}
 
 	// Attention-first: Red > Yellow > Green > Gray, then by name.

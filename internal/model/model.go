@@ -78,6 +78,43 @@ func (c CIState) Short() string {
 	}
 }
 
+// ScanState is the per-repo enablement of a scanning product (code-scanning or
+// secret-scanning). It is a tri-state because "0 open alerts" is ambiguous on
+// its own: a repo can have scanning ON and clean, or simply OFF. Only a
+// per-repo API probe distinguishes them (200 = on, 403/404 = off).
+type ScanState int
+
+const (
+	ScanUnknown ScanState = iota // couldn't determine (network/5xx/rate-limit) -> "?"
+	ScanOff                      // not enabled / no analysis / no access      -> "off"
+	ScanOn                       // enabled; the alert count is meaningful      -> "N"
+)
+
+func (s ScanState) String() string {
+	switch s {
+	case ScanOn:
+		return "on"
+	case ScanOff:
+		return "off"
+	default:
+		return "unknown"
+	}
+}
+
+// Cell renders the scan column: the open-alert count when on, "off" when not
+// enabled, and "?" when undetermined. Shared by the TUI, web, and --plain
+// renderers so the three never drift.
+func (s ScanState) Cell(openAlerts int) string {
+	switch s {
+	case ScanOn:
+		return itoa(openAlerts)
+	case ScanOff:
+		return "off"
+	default:
+		return "?"
+	}
+}
+
 // AlertCounts is a severity breakdown of open alerts.
 type AlertCounts struct {
 	Critical int `json:"critical"`
@@ -112,10 +149,15 @@ type Repo struct {
 
 	Dependabot        AlertCounts `json:"dependabot"`
 	DependabotEnabled bool        `json:"dependabot_enabled"`
-	CodeScanning      int         `json:"code_scanning"`
-	CodeScanEnabled   bool        `json:"code_scanning_enabled"`
-	SecretScanning    int         `json:"secret_scanning"`
-	SecretScanEnabled bool        `json:"secret_scanning_enabled"`
+
+	// Code/secret scanning: a tri-state enablement plus the open-alert count.
+	// The count is only meaningful when the corresponding ScanState is ScanOn.
+	CodeScanning   int       `json:"code_scanning"`
+	CodeScan       ScanState `json:"-"`
+	CodeScanName   string    `json:"code_scanning_status"` // on / off / unknown
+	SecretScanning int       `json:"secret_scanning"`
+	SecretScan     ScanState `json:"-"`
+	SecretScanName string    `json:"secret_scanning_status"`
 
 	LatestTag     string `json:"latest_tag"`
 	LatestRelease string `json:"latest_release"`

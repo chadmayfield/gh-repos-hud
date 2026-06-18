@@ -70,20 +70,18 @@ func ciFromRollup(r *struct {
 	return ciFromState(r.State)
 }
 
-// buildRepo maps a GraphQL node plus the REST scan counts into a model.Repo,
-// computing every derived field. codeAvail/secretAvail report whether the
-// org-level scanning endpoints were reachable (used to mark coverage).
-func buildRepo(n gqlRepoNode, codeCount, secretCount int, codeAvail, secretAvail bool) model.Repo {
+// buildRepo maps a GraphQL node into a model.Repo, computing every derived
+// field except the scan columns and the final health rollup. Per-repo code/
+// secret scan status is filled in concurrently by fetchOwner afterward (it
+// needs a REST probe per repo), and health is rolled up there once those counts
+// exist — see ComputeHealth, which factors scan alerts in.
+func buildRepo(n gqlRepoNode) model.Repo {
 	r := model.Repo{
 		Name:              n.Name,
 		URL:               n.URL,
 		Private:           n.IsPrivate,
 		Archived:          n.IsArchived,
 		DependabotEnabled: n.HasVulnerabilityAlertsEnabled,
-		CodeScanning:      codeCount,
-		SecretScanning:    secretCount,
-		CodeScanEnabled:   codeAvail,
-		SecretScanEnabled: secretAvail,
 	}
 
 	if n.DefaultBranchRef != nil {
@@ -142,8 +140,7 @@ func buildRepo(n gqlRepoNode, codeCount, secretCount int, codeAvail, secretAvail
 
 	r.PRs = classifyPRs(n.PullRequests.TotalCount, n.PullRequests.Nodes)
 	r.CIName = r.CI.String()
-	r.Health = model.ComputeHealth(r)
-	r.HealthName = r.Health.String()
+	// Health is rolled up later in fetchOwner, after the scan probes land.
 	return r
 }
 

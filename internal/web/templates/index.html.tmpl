@@ -50,8 +50,8 @@
           <td class="mono">{{.ShortSHA}}</td>
           <td class="mono">{{dash .LatestTag}}</td>
           <td class="mono">{{.Dependabot.Critical}}/{{.Dependabot.High}}/{{.Dependabot.Moderate}}/{{.Dependabot.Low}}</td>
-          <td class="mono">{{scan .CodeScanEnabled .CodeScanning}}</td>
-          <td class="mono">{{scan .SecretScanEnabled .SecretScanning}}</td>
+          <td class="mono">{{scan .CodeScan .CodeScanning}}</td>
+          <td class="mono">{{scan .SecretScan .SecretScanning}}</td>
           <td>{{.UndeployedLabel}}</td>
           <td class="mono">{{.PRs.Bot}}/{{.PRs.Human}}</td>
         </tr>
