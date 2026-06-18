@@ -2,8 +2,12 @@ package cmd
 
 import (
 	"context"
+	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/chadmayfield/gh-repos-hud/internal/config"
+	"github.com/chadmayfield/gh-repos-hud/internal/ghclient"
 )
 
 // Global flags (bound in init).
@@ -29,8 +33,35 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runRoot(cmd.Context())
+		opts, interval, _ := resolveOptions(cmd)
+		return runRoot(cmd.Context(), opts, interval)
 	},
+}
+
+// resolveOptions merges config-file settings with flags (flags win when set).
+// Returns the fetch options, the refresh interval, and the web port.
+func resolveOptions(cmd *cobra.Command) (ghclient.Options, time.Duration, int) {
+	cfg := config.Load()
+	opts := ghclient.DefaultOptions()
+	opts.IncludeOrgs = cfg.IncludeOrgs
+	opts.ExcludeOrgs = cfg.ExcludeOrgs
+	opts.IncludePersonal = cfg.IncludePersonal
+	opts.ExcludeArchived = cfg.ExcludeArchived
+	opts.CacheTTL = time.Duration(cfg.CacheTTLSeconds) * time.Second
+	opts.NoCache = flagNoCache
+
+	if cmd.Flags().Changed("org") {
+		opts.IncludeOrgs = flagOrgs
+	}
+	refresh := cfg.RefreshSeconds
+	if cmd.Flags().Changed("refresh") {
+		refresh = flagRefresh
+	}
+	port := cfg.Port
+	if cmd.Flags().Changed("port") {
+		port = flagPort
+	}
+	return opts, time.Duration(refresh) * time.Second, port
 }
 
 // Execute runs the root command with the given context.

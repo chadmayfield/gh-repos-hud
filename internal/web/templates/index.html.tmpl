@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="refresh" content="{{.Interval}}">
+  {{if .Watch}}<meta http-equiv="refresh" content="{{.Interval}}">{{end}}
   <title>gh-repos-hud</title>
   <link rel="stylesheet" href="/assets/app.css">
 </head>
@@ -16,6 +16,8 @@
       · REST {{.RateLimit.RESTRemaining}}/{{.RateLimit.RESTLimit}}
       · GraphQL {{.RateLimit.GraphQLRemaining}}/{{.RateLimit.GraphQLLimit}}
       {{if .Warnings}}· <span class="warn">{{len .Warnings}} warning(s)</span>{{end}}
+      · <a href="/?refresh=1">refresh</a>
+      · auto-refresh {{if $.Watch}}on{{else}}<span class="muted">off (--watch to enable)</span>{{end}}
     </p>
     {{end}}
   </header>
@@ -62,6 +64,6 @@
   {{end}}
   </main>
 
-  <script src="/assets/poll.js" data-interval="{{.Interval}}"></script>
+  {{if .Watch}}<script src="/assets/poll.js" data-interval="{{.Interval}}"></script>{{end}}
 </body>
 </html>

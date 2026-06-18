@@ -14,6 +14,7 @@ import (
 // Options controls a FetchState run.
 type Options struct {
 	IncludeOrgs     []string
+	ExcludeOrgs     []string
 	IncludePersonal bool
 	ExcludeArchived bool
 	NoCache         bool
@@ -36,7 +37,7 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 		}
 	}
 
-	owners, err := c.DiscoverOwners(ctx, opts.IncludeOrgs, opts.IncludePersonal)
+	owners, err := c.DiscoverOwners(ctx, opts.IncludeOrgs, opts.ExcludeOrgs, opts.IncludePersonal)
 	if err != nil {
 		return nil, err
 	}

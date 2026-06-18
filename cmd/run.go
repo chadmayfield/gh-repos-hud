@@ -13,20 +13,16 @@ import (
 	"github.com/chadmayfield/gh-repos-hud/internal/tui"
 )
 
-func runRoot(ctx context.Context) error {
+func runRoot(ctx context.Context, opts ghclient.Options, interval time.Duration) error {
 	client, err := ghclient.New()
 	if err != nil {
 		return err
 	}
 
-	opts := ghclient.DefaultOptions()
-	opts.IncludeOrgs = flagOrgs
-	opts.NoCache = flagNoCache
-
 	// Interactive TUI by default; --json / --plain (or a non-TTY stdout) take
 	// the non-interactive paths and fetch once up front.
 	if !flagJSON && !flagPlain && isTTY() {
-		m := tui.New(client, opts, flagWatch, time.Duration(flagRefresh)*time.Second)
+		m := tui.New(client, opts, flagWatch, interval)
 		m.SetOnlyAttention(flagOnlyAttention)
 		return tui.Run(m)
 	}

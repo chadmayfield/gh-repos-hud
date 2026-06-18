@@ -9,9 +9,10 @@ type ownerRef struct {
 }
 
 // DiscoverOwners returns the personal account plus every org the user belongs
-// to. If include is non-empty, only those owner names are kept. If
-// includePersonal is false, the personal account is dropped.
-func (c *Client) DiscoverOwners(ctx context.Context, include []string, includePersonal bool) ([]ownerRef, error) {
+// to. If include is non-empty, only those owner names are kept; names in
+// exclude are always dropped. If includePersonal is false, the personal
+// account is dropped.
+func (c *Client) DiscoverOwners(ctx context.Context, include, exclude []string, includePersonal bool) ([]ownerRef, error) {
 	me, err := restGet[struct {
 		Login string `json:"login"`
 	}](ctx, c.rest, "user")
@@ -30,7 +31,11 @@ func (c *Client) DiscoverOwners(ctx context.Context, include []string, includePe
 	for _, n := range include {
 		want[n] = true
 	}
-	keep := func(name string) bool { return len(want) == 0 || want[name] }
+	skip := map[string]bool{}
+	for _, n := range exclude {
+		skip[n] = true
+	}
+	keep := func(name string) bool { return (len(want) == 0 || want[name]) && !skip[name] }
 
 	var owners []ownerRef
 	if includePersonal && me.Login != "" && keep(me.Login) {

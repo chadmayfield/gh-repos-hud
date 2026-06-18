@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"time"
-
 	"github.com/spf13/cobra"
 
 	"github.com/chadmayfield/gh-repos-hud/internal/ghclient"
@@ -23,11 +21,10 @@ var serveCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		opts := ghclient.DefaultOptions()
-		opts.IncludeOrgs = flagOrgs
-		opts.NoCache = flagNoCache
-		interval := time.Duration(flagRefresh) * time.Second
-		return web.Serve(cmd.Context(), client, opts, flagPort, interval)
+		opts, interval, port := resolveOptions(cmd)
+		// Default: on-demand fetch per request (cached); --watch enables the
+		// background poller + page auto-refresh.
+		return web.Serve(cmd.Context(), client, opts, port, interval, flagWatch)
 	},
 }
 

@@ -26,10 +26,22 @@ gh extension install chadmayfield/gh-repos-hud
 ```sh
 gh repos-hud                      # interactive TUI (default)
 gh repos-hud serve --port 8787    # local web dashboard at http://127.0.0.1:8787
+gh repos-hud serve --watch        # web dashboard that auto-refreshes (default: on-demand)
 gh repos-hud --json               # machine-readable snapshot
 gh repos-hud --org acme       # limit to specific orgs (repeatable)
 gh repos-hud --only-attention     # only repos needing attention (non-green)
+gh repos-hud --watch              # TUI auto-refresh (default: manual 'r' only)
 ```
+
+**TUI keys:** `j/k` move · `space`/`pgdn`/`g`/`G` page · `enter` drill in (alerts/PRs) ·
+`tab` fold org · `s` sort · `/` filter · `a` attention-only · `o` open · `r` refresh · `q` quit.
+
+**Caching:** a 5-min disk cache means repeated runs make zero API calls; `r`/`--no-cache`
+force fresh. The footer shows GraphQL point-cost per fetch and backs off auto-refresh when
+the budget is low.
+
+**Config (optional):** `~/.config/gh-repos-hud/config.yml` — see `config.yml.example`
+(org include/exclude, personal/archived, refresh interval, cache TTL, port). Flags override it.
 
 Requires a `gh` login with at least `repo` and `read:org` scopes;
 `security_events` / `admin:org` enable the code/secret-scanning and GHAS-billing

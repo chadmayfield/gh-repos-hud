@@ -22,6 +22,7 @@ type Server struct {
 	client   *ghclient.Client
 	opts     ghclient.Options
 	interval time.Duration
+	watch    bool
 	state    atomic.Pointer[model.State]
 	tmpl     *template.Template
 }
@@ -37,15 +38,21 @@ func newServer(client *ghclient.Client, opts ghclient.Options, interval time.Dur
 }
 
 // Serve starts the dashboard on 127.0.0.1:port and blocks until ctx is done.
-func Serve(ctx context.Context, client *ghclient.Client, opts ghclient.Options, port int, interval time.Duration) error {
+// When watch is false (default), it fetches once at startup and then only on
+// demand (page reload / ?refresh=1); when true, a background poller keeps the
+// snapshot fresh and the page auto-refreshes.
+func Serve(ctx context.Context, client *ghclient.Client, opts ghclient.Options, port int, interval time.Duration, watch bool) error {
 	s, err := newServer(client, opts, interval)
 	if err != nil {
 		return err
 	}
+	s.watch = watch
 
-	// Prime once, then poll in the background.
+	// Prime once; only poll in the background when watching.
 	s.refresh(ctx)
-	go s.poll(ctx)
+	if watch {
+		go s.poll(ctx)
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
@@ -104,16 +111,33 @@ func (s *Server) refresh(ctx context.Context) {
 	s.state.Store(st)
 }
 
+// refreshFresh bypasses the cache (used by the manual ?refresh=1 link).
+func (s *Server) refreshFresh(ctx context.Context) {
+	o := s.opts
+	o.NoCache = true
+	st, err := s.client.FetchState(ctx, o)
+	if err != nil {
+		slog.Warn("web manual refresh failed", "err", err)
+		return
+	}
+	s.state.Store(st)
+}
+
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
+	// On-demand refresh when the user clicks the refresh link.
+	if r.URL.Query().Get("refresh") == "1" {
+		s.refreshFresh(r.Context())
+	}
 	st := s.state.Load()
 	data := struct {
 		State    *model.State
 		Interval int
-	}{State: st, Interval: int(s.interval / time.Second)}
+		Watch    bool
+	}{State: st, Interval: int(s.interval / time.Second), Watch: s.watch}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := s.tmpl.Execute(w, data); err != nil {
 		slog.Error("template execute", "err", err)

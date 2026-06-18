@@ -1,0 +1,23 @@
+# gh-repos-hud config — copy to ~/.config/gh-repos-hud/config.yml
+# All fields are optional; command-line flags override these.
+
+orgs:
+  # Only scan these owners (empty = all orgs you belong to + personal).
+  include: []
+  # Always skip these owners.
+  exclude: []
+
+# Include your personal repos alongside org repos.
+include_personal: true
+
+# Hide archived repos.
+exclude_archived: true
+
+# Auto-refresh interval in seconds (used with --watch / serve).
+refresh: 30
+
+# Disk-cache TTL in seconds (repeated runs within this window make no API calls).
+cache_ttl: 300
+
+# Default port for `gh repos-hud serve`.
+port: 8787
