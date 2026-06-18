@@ -156,6 +156,7 @@ type RateLimit struct {
 	RESTLimit        int       `json:"rest_limit"`
 	GraphQLRemaining int       `json:"graphql_remaining"`
 	GraphQLLimit     int       `json:"graphql_limit"`
+	GraphQLCost      int       `json:"graphql_cost"` // points this fetch spent
 	ResetAt          time.Time `json:"reset_at"`
 }
 

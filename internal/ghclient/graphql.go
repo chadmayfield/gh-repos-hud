@@ -13,6 +13,7 @@ type gqlRateLimit struct {
 	Remaining int       `json:"remaining"`
 	Limit     int       `json:"limit"`
 	ResetAt   time.Time `json:"resetAt"`
+	Cost      int       `json:"cost"`
 }
 
 type gqlCommit struct {

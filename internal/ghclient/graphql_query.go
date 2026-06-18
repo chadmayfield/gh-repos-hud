@@ -50,7 +50,7 @@ fragment repoFields on Repository {
 
 const orgReposQuery = repoFields + `
 query OrgRepos($login: String!, $cursor: String) {
-  rateLimit { remaining limit resetAt }
+  rateLimit { remaining limit resetAt cost }
   organization(login: $login) {
     repositories(first: 100, after: $cursor, ownerAffiliations: OWNER, orderBy: {field: PUSHED_AT, direction: DESC}) {
       pageInfo { hasNextPage endCursor }
@@ -61,7 +61,7 @@ query OrgRepos($login: String!, $cursor: String) {
 
 const userReposQuery = repoFields + `
 query UserRepos($login: String!, $cursor: String) {
-  rateLimit { remaining limit resetAt }
+  rateLimit { remaining limit resetAt cost }
   user(login: $login) {
     repositories(first: 100, after: $cursor, ownerAffiliations: OWNER, orderBy: {field: PUSHED_AT, direction: DESC}) {
       pageInfo { hasNextPage endCursor }

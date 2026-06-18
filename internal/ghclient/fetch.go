@@ -43,18 +43,20 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 
 	results := make([]model.Owner, len(owners))
 	warns := make([][]model.Warning, len(owners))
+	costs := make([]int, len(owners))
 
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(6)
 	for i, o := range owners {
 		i, o := i, o
 		g.Go(func() error {
-			owner, w, err := c.fetchOwner(gctx, o, opts)
+			owner, w, cost, err := c.fetchOwner(gctx, o, opts)
 			if err != nil {
 				return err
 			}
 			results[i] = owner
 			warns[i] = w
+			costs[i] = cost
 			return nil
 		})
 	}
@@ -72,14 +74,17 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 		state.Warnings = append(state.Warnings, w...)
 	}
 	state.RateLimit = c.rateLimit(ctx)
+	for _, cost := range costs {
+		state.RateLimit.GraphQLCost += cost
+	}
 	saveCache(state)
 	return state, nil
 }
 
-func (c *Client) fetchOwner(ctx context.Context, o ownerRef, opts Options) (model.Owner, []model.Warning, error) {
-	nodes, _, err := c.fetchRepoNodes(ctx, o.Name, o.IsUser)
+func (c *Client) fetchOwner(ctx context.Context, o ownerRef, opts Options) (model.Owner, []model.Warning, int, error) {
+	nodes, rl, err := c.fetchRepoNodes(ctx, o.Name, o.IsUser)
 	if err != nil {
-		return model.Owner{}, nil, err
+		return model.Owner{}, nil, 0, err
 	}
 
 	var warns []model.Warning
@@ -93,7 +98,7 @@ func (c *Client) fetchOwner(ctx context.Context, o ownerRef, opts Options) (mode
 			if errors.Is(err, errFeatureUnavailable) {
 				warns = append(warns, model.Warning{Owner: o.Name, Feature: "code-scanning", Reason: "disabled or no access"})
 			} else {
-				return model.Owner{}, nil, err
+				return model.Owner{}, nil, 0, err
 			}
 		} else {
 			codeCounts, codeAvail = m, true
@@ -103,7 +108,7 @@ func (c *Client) fetchOwner(ctx context.Context, o ownerRef, opts Options) (mode
 			if errors.Is(err, errFeatureUnavailable) {
 				warns = append(warns, model.Warning{Owner: o.Name, Feature: "secret-scanning", Reason: "disabled or no access"})
 			} else {
-				return model.Owner{}, nil, err
+				return model.Owner{}, nil, 0, err
 			}
 		} else {
 			secretCounts, secretAvail = m, true
@@ -113,7 +118,7 @@ func (c *Client) fetchOwner(ctx context.Context, o ownerRef, opts Options) (mode
 			if errors.Is(err, errFeatureUnavailable) {
 				warns = append(warns, model.Warning{Owner: o.Name, Feature: "billing", Reason: "no GHAS or not an admin"})
 			} else {
-				return model.Owner{}, nil, err
+				return model.Owner{}, nil, 0, err
 			}
 		} else {
 			billing = b
@@ -139,5 +144,5 @@ func (c *Client) fetchOwner(ctx context.Context, o ownerRef, opts Options) (mode
 		}
 		return a.Name < b.Name
 	})
-	return owner, warns, nil
+	return owner, warns, rl.Cost, nil
 }
