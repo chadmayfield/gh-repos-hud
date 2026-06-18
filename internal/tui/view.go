@@ -33,26 +33,45 @@ func (m Model) View() string {
 		title += "   [attention-only]"
 	}
 	b.WriteString(styleHeader.Render(title) + "\n")
+	// Sticky column header (stays visible while the list scrolls below it).
+	b.WriteString("  " + styleDim.Render(headerRow()) + "\n")
 
-	for i, r := range m.rows {
+	cap := m.bodyCapacity()
+	end := m.scroll + cap
+	if end > len(m.rows) {
+		end = len(m.rows)
+	}
+	for i := m.scroll; i < end; i++ {
+		r := m.rows[i]
 		gutter := "  "
 		if i == m.cursor {
 			gutter = styleKey.Render("> ")
 		}
 		if r.kind == rowOrg {
 			b.WriteString(gutter + m.orgLine(r.ownerIdx) + "\n")
-			// Column header directly under each expanded org, aligned to rows.
-			if m.isExpanded(m.state.Owners[r.ownerIdx].Name) {
-				b.WriteString("  " + styleDim.Render(headerRow()) + "\n")
-			}
 		} else {
 			repo := m.state.Owners[r.ownerIdx].Repos[r.repoIdx]
 			b.WriteString(gutter + repoLine(repo) + "\n")
 		}
 	}
 
-	b.WriteString("\n" + m.footer())
+	b.WriteString(scrollIndicator(m.scroll, end, len(m.rows)) + "\n")
+	b.WriteString(m.footer())
 	return b.String()
+}
+
+func scrollIndicator(start, end, total int) string {
+	if total == 0 {
+		return styleDim.Render("  (no repos)")
+	}
+	up, down := "  ", "  "
+	if start > 0 {
+		up = styleKey.Render(" ^")
+	}
+	if end < total {
+		down = styleKey.Render(" v")
+	}
+	return styleDim.Render(fmt.Sprintf("  rows %d-%d of %d", start+1, end, total)) + up + down
 }
 
 func headerRow() string {
@@ -140,7 +159,7 @@ func (m Model) footer() string {
 		lipgloss.NewStyle().Foreground(colRed).Render("[!!] CI-fail or crit/high") + "  " +
 		styleDim.Render("[?] unknown")
 	cols := "cols: DEP=crit/high/mod/low   UNDEP=commits since last tag   PR=bot/human   CODE/SEC=scan alerts (? = off)"
-	keys := "j/k move   enter drill   space fold   / filter   a attention-only   o open   r refresh   q quit"
+	keys := "j/k move   space/pgdn page   g/G top/bottom   enter drill   tab fold   / filter   a attn   o open   r refresh   q quit"
 	return styleFooter.Render("  ") + strings.Join(parts, "   ") + "\n" +
 		"  " + legend + "\n" +
 		styleFooter.Render("  "+cols) + "\n" +

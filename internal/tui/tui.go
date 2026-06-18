@@ -45,7 +45,45 @@ type Model struct {
 	loading  bool
 	err      error
 
+	scroll        int // index of the first visible row
 	width, height int
+}
+
+// bodyCapacity is how many list rows fit between the sticky header and footer.
+// Before the first WindowSizeMsg (height unset) it returns an effectively
+// unlimited window so the initial paint isn't clipped.
+func (m Model) bodyCapacity() int {
+	if m.height <= 0 {
+		return 100000
+	}
+	// title(1) + sticky header(1) + scroll indicator(1) + blank(1) + footer(4)
+	c := m.height - 8
+	if c < 1 {
+		return 1
+	}
+	return c
+}
+
+// clampScroll keeps the cursor within the visible window and the window within
+// bounds.
+func (m *Model) clampScroll() {
+	cap := m.bodyCapacity()
+	if m.cursor < m.scroll {
+		m.scroll = m.cursor
+	}
+	if m.cursor >= m.scroll+cap {
+		m.scroll = m.cursor - cap + 1
+	}
+	maxScroll := len(m.rows) - cap
+	if maxScroll < 0 {
+		maxScroll = 0
+	}
+	if m.scroll > maxScroll {
+		m.scroll = maxScroll
+	}
+	if m.scroll < 0 {
+		m.scroll = 0
+	}
 }
 
 // New builds the initial model.
@@ -106,6 +144,7 @@ func (m *Model) rebuildRows() {
 	if m.cursor < 0 {
 		m.cursor = 0
 	}
+	m.clampScroll()
 }
 
 // isExpanded reports whether an org is expanded (default: expanded).

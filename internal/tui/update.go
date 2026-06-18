@@ -12,6 +12,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.clampScroll()
 		return m, nil
 
 	case stateLoadedMsg:
@@ -19,6 +20,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = nil
 		m.loading = false
 		m.rebuildRows()
+		m.clampScroll()
 		return m, nil
 
 	case errMsg:
@@ -73,11 +75,36 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.cursor > 0 {
 			m.cursor--
 		}
+		m.clampScroll()
 		return m, nil
 	case "down", "j":
 		if m.cursor < len(m.rows)-1 {
 			m.cursor++
 		}
+		m.clampScroll()
+		return m, nil
+	case "pgup", "ctrl+u":
+		m.cursor -= m.bodyCapacity()
+		if m.cursor < 0 {
+			m.cursor = 0
+		}
+		m.clampScroll()
+		return m, nil
+	case "pgdown", "ctrl+d", " ":
+		// space pages down (org-fold moved to tab/enter to free it for paging)
+		m.cursor += m.bodyCapacity()
+		if m.cursor > len(m.rows)-1 {
+			m.cursor = len(m.rows) - 1
+		}
+		m.clampScroll()
+		return m, nil
+	case "g", "home":
+		m.cursor = 0
+		m.clampScroll()
+		return m, nil
+	case "G", "end":
+		m.cursor = len(m.rows) - 1
+		m.clampScroll()
 		return m, nil
 	case "enter":
 		if m.detail {
@@ -96,11 +123,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.detail = true
 		}
 		return m, nil
-	case " ":
+	case "tab":
 		if len(m.rows) > 0 {
 			name := m.state.Owners[m.rows[m.cursor].ownerIdx].Name
 			m.expanded[name] = !m.isExpanded(name)
 			m.rebuildRows()
+			m.clampScroll()
 		}
 		return m, nil
 	case "a":
