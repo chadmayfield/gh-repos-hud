@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -149,6 +150,9 @@ func (m Model) viewDetail() string {
 func (m Model) footer() string {
 	rl := m.state.RateLimit
 	var parts []string
+	if m.state.FromCache {
+		parts = append(parts, styleWarn.Render(fmt.Sprintf("cached %s ago (r=refresh)", time.Since(m.state.FetchedAt).Round(time.Second))))
+	}
 	parts = append(parts, fmt.Sprintf("REST %d/%d  GraphQL %d/%d", rl.RESTRemaining, rl.RESTLimit, rl.GraphQLRemaining, rl.GraphQLLimit))
 	if n := len(m.state.Warnings); n > 0 {
 		parts = append(parts, styleWarn.Render(fmt.Sprintf("%d warning(s)", n)))

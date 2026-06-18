@@ -33,11 +33,11 @@ fragment repoFields on Repository {
       }
     }
   }
-  vulnerabilityAlerts(states: OPEN, first: 100) {
+  vulnerabilityAlerts(states: OPEN, first: 50) {
     totalCount
     nodes { securityVulnerability { severity } }
   }
-  pullRequests(states: OPEN, first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
+  pullRequests(states: OPEN, first: 20, orderBy: {field: UPDATED_AT, direction: DESC}) {
     totalCount
     nodes {
       isDraft

@@ -17,15 +17,25 @@ type Options struct {
 	IncludePersonal bool
 	ExcludeArchived bool
 	NoCache         bool
+	CacheTTL        time.Duration
 }
 
-// DefaultOptions returns sensible defaults: all orgs + personal, no archived.
+// DefaultOptions returns sensible defaults: all orgs + personal, no archived,
+// 5-minute cache.
 func DefaultOptions() Options {
-	return Options{IncludePersonal: true, ExcludeArchived: true}
+	return Options{IncludePersonal: true, ExcludeArchived: true, CacheTTL: 5 * time.Minute}
 }
 
 // FetchState builds the full HUD snapshot across every owner concurrently.
+// Unless NoCache is set, a fresh-enough on-disk snapshot is reused to avoid
+// re-spending the point-metered GraphQL budget.
 func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, error) {
+	if !opts.NoCache && opts.CacheTTL > 0 {
+		if st, ok := loadCache(opts.CacheTTL); ok {
+			return st, nil
+		}
+	}
+
 	owners, err := c.DiscoverOwners(ctx, opts.IncludeOrgs, opts.IncludePersonal)
 	if err != nil {
 		return nil, err
@@ -62,6 +72,7 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 		state.Warnings = append(state.Warnings, w...)
 	}
 	state.RateLimit = c.rateLimit(ctx)
+	saveCache(state)
 	return state, nil
 }
 

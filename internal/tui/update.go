@@ -32,7 +32,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmds []tea.Cmd
 		if m.watch && !m.loading {
 			m.loading = true
-			cmds = append(cmds, loadCmd(m.client, m.opts))
+			cmds = append(cmds, loadCmd(m.client, freshOpts(m.opts)))
 		}
 		if m.watch {
 			cmds = append(cmds, tickCmd(m.interval))
@@ -138,7 +138,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "r":
 		if !m.loading {
 			m.loading = true
-			return m, loadCmd(m.client, m.opts)
+			return m, loadCmd(m.client, freshOpts(m.opts))
 		}
 		return m, nil
 	case "/":

@@ -75,9 +75,13 @@ func renderText(w *os.File, st *model.State) error {
 			fmt.Fprintf(w, "  %s/%s: %s\n", wn.Owner, wn.Feature, wn.Reason)
 		}
 	}
-	fmt.Fprintf(w, "\nrate: REST %d/%d  GraphQL %d/%d\n",
+	cache := ""
+	if st.FromCache {
+		cache = fmt.Sprintf("  [cached %s ago; --no-cache to refresh]", time.Since(st.FetchedAt).Round(time.Second))
+	}
+	fmt.Fprintf(w, "\nrate: REST %d/%d  GraphQL %d/%d%s\n",
 		st.RateLimit.RESTRemaining, st.RateLimit.RESTLimit,
-		st.RateLimit.GraphQLRemaining, st.RateLimit.GraphQLLimit)
+		st.RateLimit.GraphQLRemaining, st.RateLimit.GraphQLLimit, cache)
 	return nil
 }
 

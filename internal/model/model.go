@@ -173,4 +173,5 @@ type State struct {
 	FetchedAt time.Time `json:"fetched_at"`
 	RateLimit RateLimit `json:"rate_limit"`
 	Warnings  []Warning `json:"warnings,omitempty"`
+	FromCache bool      `json:"from_cache,omitempty"`
 }

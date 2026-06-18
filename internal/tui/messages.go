@@ -29,3 +29,10 @@ func loadCmd(client *ghclient.Client, opts ghclient.Options) tea.Cmd {
 func tickCmd(d time.Duration) tea.Cmd {
 	return tea.Tick(d, func(time.Time) tea.Msg { return tickMsg{} })
 }
+
+// freshOpts returns a copy that bypasses the cache (for explicit refresh / watch
+// ticks — the user wants new data, not the cached snapshot).
+func freshOpts(o ghclient.Options) ghclient.Options {
+	o.NoCache = true
+	return o
+}
