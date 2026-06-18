@@ -25,7 +25,7 @@ func cachePath() (string, error) {
 
 // cacheVersion is bumped whenever the cached model shape changes, so a binary
 // never decodes an incompatible older cache (which could yield partial data).
-const cacheVersion = 2
+const cacheVersion = 3
 
 type cacheEnvelope struct {
 	Version int

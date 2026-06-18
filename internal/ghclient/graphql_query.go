@@ -23,7 +23,7 @@ fragment repoFields on Repository {
     }
   }
   latestRelease { tagName }
-  refs(refPrefix: "refs/tags/", first: 20, orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {
+  refs(refPrefix: "refs/tags/", first: 100, orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {
     nodes {
       name
       target {

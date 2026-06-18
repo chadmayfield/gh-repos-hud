@@ -2,6 +2,7 @@ package ghclient
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/chadmayfield/gh-repos-hud/internal/model"
@@ -12,6 +13,34 @@ import (
 var versionTagRe = regexp.MustCompile(`^v?\d+\.\d+`)
 
 func isVersionTag(name string) bool { return versionTagRe.MatchString(name) }
+
+// semverNumRe extracts the leading major.minor.patch from a tag name.
+var semverNumRe = regexp.MustCompile(`^v?(\d+)\.(\d+)(?:\.(\d+))?`)
+
+// semverKey parses a tag into a comparable [major, minor, patch]. ok is false
+// for non-version tags. Pre-release/build suffixes are ignored.
+func semverKey(name string) ([3]int, bool) {
+	m := semverNumRe.FindStringSubmatch(name)
+	if m == nil {
+		return [3]int{}, false
+	}
+	var k [3]int
+	for i := 0; i < 3; i++ {
+		if m[i+1] != "" {
+			k[i], _ = strconv.Atoi(m[i+1])
+		}
+	}
+	return k, true
+}
+
+func semverGreater(a, b [3]int) bool {
+	for i := 0; i < 3; i++ {
+		if a[i] != b[i] {
+			return a[i] > b[i]
+		}
+	}
+	return false
+}
 
 var botLogins = map[string]bool{
 	"dependabot": true, "dependabot[bot]": true,
@@ -86,19 +115,14 @@ func buildRepo(n gqlRepoNode, codeCount, secretCount int, codeAvail, secretAvail
 	if n.LatestRelease != nil && isVersionTag(n.LatestRelease.TagName) {
 		r.LatestRelease = n.LatestRelease.TagName
 	}
+	// Pick the HIGHEST semver tag (not the newest by commit date) as the
+	// deployment baseline — otherwise an out-of-order tag misreads "latest".
 	var tagName, tagSHA string
-	for _, ref := range n.Refs.Nodes { // refs are TAG_COMMIT_DATE desc
-		if isVersionTag(ref.Name) {
-			tagName = ref.Name
-			tagSHA = ref.Target.commitSHA()
-			break
-		}
-	}
-	if r.LatestRelease != "" { // prefer the release's exact ref if present
-		for _, ref := range n.Refs.Nodes {
-			if ref.Name == r.LatestRelease {
-				tagName, tagSHA = ref.Name, ref.Target.commitSHA()
-				break
+	var best [3]int
+	for _, ref := range n.Refs.Nodes {
+		if k, ok := semverKey(ref.Name); ok {
+			if tagName == "" || semverGreater(k, best) {
+				best, tagName, tagSHA = k, ref.Name, ref.Target.commitSHA()
 			}
 		}
 	}
