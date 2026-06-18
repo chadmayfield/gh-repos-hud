@@ -1,0 +1,138 @@
+package ghclient
+
+import (
+	"strings"
+
+	"github.com/chadmayfield/gh-repos-hud/internal/model"
+)
+
+var botLogins = map[string]bool{
+	"dependabot": true, "dependabot[bot]": true,
+	"renovate": true, "renovate[bot]": true,
+	"github-actions[bot]": true,
+}
+
+func ciFromState(s string) model.CIState {
+	switch s {
+	case "SUCCESS":
+		return model.CISuccess
+	case "FAILURE", "ERROR":
+		return model.CIFailure
+	case "PENDING", "EXPECTED":
+		return model.CIPending
+	default:
+		return model.CINone
+	}
+}
+
+func ciFromRollup(r *struct {
+	State string `json:"state"`
+}) model.CIState {
+	if r == nil {
+		return model.CINone
+	}
+	return ciFromState(r.State)
+}
+
+// buildRepo maps a GraphQL node plus the REST scan counts into a model.Repo,
+// computing every derived field. codeAvail/secretAvail report whether the
+// org-level scanning endpoints were reachable (used to mark coverage).
+func buildRepo(n gqlRepoNode, codeCount, secretCount int, codeAvail, secretAvail bool) model.Repo {
+	r := model.Repo{
+		Name:              n.Name,
+		URL:               n.URL,
+		Private:           n.IsPrivate,
+		Archived:          n.IsArchived,
+		DependabotEnabled: n.HasVulnerabilityAlertsEnabled,
+		CodeScanning:      codeCount,
+		SecretScanning:    secretCount,
+		CodeScanEnabled:   codeAvail,
+		SecretScanEnabled: secretAvail,
+	}
+
+	if n.DefaultBranchRef != nil {
+		r.DefaultBranch = n.DefaultBranchRef.Name
+		r.ShortSHA = n.DefaultBranchRef.Target.AbbreviatedOid
+		r.HeadSHA = n.DefaultBranchRef.Target.Oid
+		r.CI = ciFromRollup(n.DefaultBranchRef.Target.StatusCheckRollup)
+	}
+	if r.ShortSHA == "" {
+		r.ShortSHA = "-"
+	}
+
+	// Dependabot severity breakdown (total authoritative from totalCount).
+	for _, a := range n.VulnerabilityAlerts.Nodes {
+		switch strings.ToUpper(a.SecurityVulnerability.Severity) {
+		case "CRITICAL":
+			r.Dependabot.Critical++
+		case "HIGH":
+			r.Dependabot.High++
+		case "MODERATE", "MEDIUM":
+			r.Dependabot.Moderate++
+		case "LOW":
+			r.Dependabot.Low++
+		}
+	}
+
+	// Latest tag / release and its commit SHA.
+	if n.LatestRelease != nil {
+		r.LatestRelease = n.LatestRelease.TagName
+	}
+	var tagName, tagSHA string
+	if len(n.Refs.Nodes) > 0 {
+		tagName = n.Refs.Nodes[0].Name
+		tagSHA = n.Refs.Nodes[0].Target.commitSHA()
+		if r.LatestRelease != "" {
+			for _, ref := range n.Refs.Nodes {
+				if ref.Name == r.LatestRelease {
+					tagSHA = ref.Target.commitSHA()
+					break
+				}
+			}
+		}
+	}
+	r.LatestTag = tagName
+	r.TagSHA = tagSHA
+
+	// Undeployed: commits on default branch since the latest tag.
+	switch {
+	case tagName == "" && r.LatestRelease == "":
+		r.Untagged = true
+		r.Undeployed = 0
+	case r.HeadSHA != "" && tagSHA != "" && r.HeadSHA == tagSHA:
+		r.Undeployed = 0
+	default:
+		r.Undeployed = -1 // >=1, exact count resolved lazily via compare
+	}
+
+	r.PRs = classifyPRs(n.PullRequests.TotalCount, n.PullRequests.Nodes)
+	r.CIName = r.CI.String()
+	r.Health = model.ComputeHealth(r)
+	r.HealthName = r.Health.String()
+	return r
+}
+
+func classifyPRs(total int, nodes []gqlPR) model.PRStats {
+	s := model.PRStats{Total: total}
+	for _, pr := range nodes {
+		isBot := pr.Author.TypeName == "Bot" || botLogins[strings.ToLower(pr.Author.Login)]
+		if isBot {
+			s.Bot++
+		} else {
+			s.Human++
+		}
+		if pr.IsDraft {
+			s.Draft++
+		}
+		if pr.Mergeable == "MERGEABLE" {
+			s.Mergeable++
+		}
+		if len(pr.Commits.Nodes) > 0 {
+			rollup := pr.Commits.Nodes[0].Commit.StatusCheckRollup
+			if rollup != nil && rollup.State == "SUCCESS" {
+				s.CIGreen++
+			}
+		}
+	}
+	return s
+}

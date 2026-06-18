@@ -1,0 +1,84 @@
+package cmd
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"text/tabwriter"
+
+	"github.com/chadmayfield/gh-repos-hud/internal/ghclient"
+	"github.com/chadmayfield/gh-repos-hud/internal/model"
+)
+
+func runRoot(ctx context.Context) error {
+	client, err := ghclient.New()
+	if err != nil {
+		return err
+	}
+
+	opts := ghclient.DefaultOptions()
+	opts.IncludeOrgs = flagOrgs
+	opts.NoCache = flagNoCache
+
+	state, err := client.FetchState(ctx, opts)
+	if err != nil {
+		return err
+	}
+
+	if flagJSON {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(state)
+	}
+
+	// Placeholder text table until the TUI lands (Phase 2).
+	return renderText(os.Stdout, state)
+}
+
+func renderText(w *os.File, st *model.State) error {
+	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
+	for _, o := range st.Owners {
+		label := o.Name
+		if o.IsUser {
+			label += " (personal)"
+		}
+		if o.Billing.Known && (o.Billing.SecretProtectionCommitters > 0 || o.Billing.CodeSecurityCommitters > 0) {
+			label += fmt.Sprintf("  GHAS: secret=%d code=%d", o.Billing.SecretProtectionCommitters, o.Billing.CodeSecurityCommitters)
+		}
+		fmt.Fprintf(w, "\n%s\n", label)
+		fmt.Fprintln(tw, "  HEALTH\tREPO\tCI\tSHA\tTAG\tDEP(C/H/M/L)\tCODE\tSECRET\tUNDEP\tPR(bot/hum)")
+		for _, r := range o.Repos {
+			fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\t%d/%d/%d/%d\t%s\t%s\t%s\t%d/%d\n",
+				r.Health.Glyph(), r.Name, r.CI.Short(), r.ShortSHA, tagOrDash(r.LatestTag),
+				r.Dependabot.Critical, r.Dependabot.High, r.Dependabot.Moderate, r.Dependabot.Low,
+				scanCell(r.CodeScanEnabled, r.CodeScanning), scanCell(r.SecretScanEnabled, r.SecretScanning),
+				r.UndeployedLabel(), r.PRs.Bot, r.PRs.Human)
+		}
+		tw.Flush()
+	}
+	if len(st.Warnings) > 0 {
+		fmt.Fprintf(w, "\n%d warning(s):\n", len(st.Warnings))
+		for _, wn := range st.Warnings {
+			fmt.Fprintf(w, "  %s/%s: %s\n", wn.Owner, wn.Feature, wn.Reason)
+		}
+	}
+	fmt.Fprintf(w, "\nrate: REST %d/%d  GraphQL %d/%d\n",
+		st.RateLimit.RESTRemaining, st.RateLimit.RESTLimit,
+		st.RateLimit.GraphQLRemaining, st.RateLimit.GraphQLLimit)
+	return nil
+}
+
+func tagOrDash(t string) string {
+	if t == "" {
+		return "-"
+	}
+	return t
+}
+
+func scanCell(enabled bool, n int) string {
+	if !enabled {
+		return "?"
+	}
+	return fmt.Sprintf("%d", n)
+}

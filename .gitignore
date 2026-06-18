@@ -1,0 +1,15 @@
+# Build output
+/gh-repos-hud
+/dist/
+*.exe
+
+# Go
+*.test
+*.out
+coverage.*
+
+# Local config / editor
+/config.yml
+.DS_Store
+.idea/
+.vscode/
