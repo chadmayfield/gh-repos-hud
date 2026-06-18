@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/chadmayfield/gh-repos-hud/internal/model"
 )
 
@@ -31,7 +33,6 @@ func (m Model) View() string {
 		title += "   [attention-only]"
 	}
 	b.WriteString(styleHeader.Render(title) + "\n")
-	b.WriteString(styleDim.Render("  "+headerRow()) + "\n")
 
 	for i, r := range m.rows {
 		gutter := "  "
@@ -40,6 +41,10 @@ func (m Model) View() string {
 		}
 		if r.kind == rowOrg {
 			b.WriteString(gutter + m.orgLine(r.ownerIdx) + "\n")
+			// Column header directly under each expanded org, aligned to rows.
+			if m.isExpanded(m.state.Owners[r.ownerIdx].Name) {
+				b.WriteString("  " + styleDim.Render(headerRow()) + "\n")
+			}
 		} else {
 			repo := m.state.Owners[r.ownerIdx].Repos[r.repoIdx]
 			b.WriteString(gutter + repoLine(repo) + "\n")
@@ -126,8 +131,17 @@ func (m Model) footer() string {
 	if n := len(m.state.Warnings); n > 0 {
 		parts = append(parts, styleWarn.Render(fmt.Sprintf("%d warning(s)", n)))
 	}
-	keys := "j/k move  enter drill  space fold  / filter  a attention  o open  r refresh  q quit"
-	return styleFooter.Render("  "+strings.Join(parts, "   ")) + "\n" + styleFooter.Render("  "+keys)
+	legend := "health: " +
+		lipgloss.NewStyle().Foreground(colGreen).Render("[OK] ok") + "  " +
+		lipgloss.NewStyle().Foreground(colYellow).Render("[~] attention") + "  " +
+		lipgloss.NewStyle().Foreground(colRed).Render("[!!] CI-fail or crit/high") + "  " +
+		styleDim.Render("[?] unknown")
+	cols := "cols: DEP=crit/high/mod/low   UNDEP=commits since last tag   PR=bot/human   CODE/SEC=scan alerts (? = off)"
+	keys := "j/k move   enter drill   space fold   / filter   a attention-only   o open   r refresh   q quit"
+	return styleFooter.Render("  ") + strings.Join(parts, "   ") + "\n" +
+		"  " + legend + "\n" +
+		styleFooter.Render("  "+cols) + "\n" +
+		styleFooter.Render("  "+keys)
 }
 
 // pad truncates or right-pads s to exactly n visible columns.

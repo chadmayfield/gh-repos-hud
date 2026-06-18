@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -50,7 +51,12 @@ func Serve(ctx context.Context, client *ghclient.Client, opts ghclient.Options, 
 	mux.HandleFunc("/", s.handleIndex)
 	mux.HandleFunc("/api/state.json", s.handleState)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { fmt.Fprintln(w, "ok") })
-	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(assetsFS))))
+	// Embedded files live under "assets/" — re-root so /assets/app.css resolves.
+	assetSub, err := fs.Sub(assetsFS, "assets")
+	if err != nil {
+		return fmt.Errorf("asset fs: %w", err)
+	}
+	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(assetSub))))
 
 	// Loopback only — never expose this beyond the local machine.
 	addr := fmt.Sprintf("127.0.0.1:%d", port)

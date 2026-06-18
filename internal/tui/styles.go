@@ -36,9 +36,10 @@ func healthColor(h model.Health) lipgloss.Color {
 	}
 }
 
-// glyph renders the colored ASCII health marker.
+// glyph renders the colored ASCII health marker, padded to a fixed width so
+// columns stay aligned ([OK]/[!!] are 4 wide, [~]/[?] are 3).
 func glyph(h model.Health) string {
-	return lipgloss.NewStyle().Foreground(healthColor(h)).Render(h.Glyph())
+	return lipgloss.NewStyle().Foreground(healthColor(h)).Render(pad(h.Glyph(), 4))
 }
 
 // ciStyled colors a CI short label.
