@@ -1,0 +1,30 @@
+:root {
+  --bg: #0d1117; --fg: #c9d1d9; --muted: #8b949e; --line: #21262d;
+  --red: #f85149; --yellow: #d29922; --green: #3fb950; --blue: #58a6ff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 1.5rem 2rem; background: var(--bg); color: var(--fg);
+  font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+h1 { font-size: 1.2rem; margin: 0; }
+h2 { font-size: 1rem; margin: 1.6rem 0 .4rem; border-bottom: 1px solid var(--line); padding-bottom: .25rem; }
+.meta { color: var(--muted); margin: .3rem 0 0; }
+.muted { color: var(--muted); font-weight: normal; }
+.warn { color: var(--yellow); }
+.ghas { color: var(--yellow); font-weight: normal; font-size: .85em; }
+table { border-collapse: collapse; width: 100%; }
+th, td { text-align: left; padding: .2rem .6rem .2rem 0; white-space: nowrap; }
+th { color: var(--muted); font-weight: normal; border-bottom: 1px solid var(--line); }
+td.mono { font-variant-numeric: tabular-nums; }
+td.repo a { color: var(--fg); text-decoration: none; }
+td.repo a:hover { color: var(--blue); text-decoration: underline; }
+.glyph { font-weight: bold; }
+tr.h-red .glyph { color: var(--red); }
+tr.h-yellow .glyph { color: var(--yellow); }
+tr.h-green .glyph { color: var(--green); }
+tr.h-gray .glyph { color: var(--muted); }
+.ci-success { color: var(--green); }
+.ci-failure { color: var(--red); }
+.ci-pending { color: var(--yellow); }
+tr:hover { background: #161b22; }

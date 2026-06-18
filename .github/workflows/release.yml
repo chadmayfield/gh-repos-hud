@@ -1,0 +1,20 @@
+name: release
+
+# Tag-triggered cross-platform build. cli/gh-extension-precompile builds the
+# Go binaries for every platform and attaches them to the release with the
+# names `gh extension install` expects.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cli/gh-extension-precompile@v2
+        with:
+          go_version_file: go.mod
