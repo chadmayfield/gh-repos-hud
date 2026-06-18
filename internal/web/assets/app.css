@@ -13,12 +13,31 @@ h2 { font-size: 1rem; margin: 1.6rem 0 .4rem; border-bottom: 1px solid var(--lin
 .muted { color: var(--muted); font-weight: normal; }
 .warn { color: var(--yellow); }
 .ghas { color: var(--yellow); font-weight: normal; font-size: .85em; }
-table { border-collapse: collapse; width: 100%; }
-th, td { text-align: left; padding: .2rem .6rem .2rem 0; white-space: nowrap; }
+/* One table for all orgs + fixed layout => columns align across every org. */
+table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+th, td { text-align: left; padding: .2rem .6rem .2rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 th { color: var(--muted); font-weight: normal; border-bottom: 1px solid var(--line); }
 td.mono { font-variant-numeric: tabular-nums; }
+td.repo { overflow: hidden; text-overflow: ellipsis; }
 td.repo a { color: var(--fg); text-decoration: none; }
 td.repo a:hover { color: var(--blue); text-decoration: underline; }
+
+/* Fixed column widths (repo column gets the remaining space). */
+col.c-glyph { width: 3rem; }
+col.c-ci    { width: 4rem; }
+col.c-sha   { width: 6rem; }
+col.c-tag   { width: 9rem; }
+col.c-dep   { width: 8rem; }
+col.c-num   { width: 5rem; }
+col.c-undep { width: 7rem; }
+col.c-pr    { width: 5rem; }
+
+/* Org header rows inside the shared table. */
+tr.org td {
+  font-weight: bold; padding-top: 1.4rem; border-bottom: 1px solid var(--line);
+  color: var(--fg); white-space: normal;
+}
+tr.org .ghas { font-weight: normal; }
 .glyph { font-weight: bold; }
 tr.h-red .glyph { color: var(--red); }
 tr.h-yellow .glyph { color: var(--yellow); }

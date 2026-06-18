@@ -63,9 +63,9 @@ func headerRow() string {
 
 func (m Model) orgLine(oi int) string {
 	o := m.state.Owners[oi]
-	marker := "v"
+	marker := "[-]" // expanded (can collapse)
 	if !m.isExpanded(o.Name) {
-		marker = ">"
+		marker = "[+]" // collapsed (can expand)
 	}
 	name := o.Name
 	if o.IsUser {
@@ -82,12 +82,15 @@ func (m Model) orgLine(oi int) string {
 			rd++
 		}
 	}
-	tally := fmt.Sprintf("%d repos  R:%d Y:%d G:%d", len(o.Repos), rd, y, g)
-	extra := ""
+	// Colored glyph tally, matching the legend, instead of opaque R/Y/G letters.
+	tally := fmt.Sprintf("%d repos   ", len(o.Repos)) +
+		lipgloss.NewStyle().Foreground(colRed).Render(fmt.Sprintf("[!!] %d", rd)) + "  " +
+		lipgloss.NewStyle().Foreground(colYellow).Render(fmt.Sprintf("[~] %d", y)) + "  " +
+		lipgloss.NewStyle().Foreground(colGreen).Render(fmt.Sprintf("[OK] %d", g))
 	if o.Billing.Known && (o.Billing.SecretProtectionCommitters > 0 || o.Billing.CodeSecurityCommitters > 0) {
-		extra = fmt.Sprintf("  GHAS secret=%d code=%d", o.Billing.SecretProtectionCommitters, o.Billing.CodeSecurityCommitters)
+		tally += styleDim.Render(fmt.Sprintf("   GHAS secret=%d code=%d", o.Billing.SecretProtectionCommitters, o.Billing.CodeSecurityCommitters))
 	}
-	return styleOrg.Render(marker+" "+name) + "   " + styleDim.Render(tally+extra)
+	return styleOrg.Render(marker+" "+name) + "   " + tally
 }
 
 func repoLine(r model.Repo) string {
