@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"os"
 	"text/tabwriter"
+	"time"
 
 	"github.com/chadmayfield/gh-repos-hud/internal/ghclient"
 	"github.com/chadmayfield/gh-repos-hud/internal/model"
+	"github.com/chadmayfield/gh-repos-hud/internal/tui"
 )
 
 func runRoot(ctx context.Context) error {
@@ -21,19 +23,29 @@ func runRoot(ctx context.Context) error {
 	opts.IncludeOrgs = flagOrgs
 	opts.NoCache = flagNoCache
 
+	// Interactive TUI by default; --json / --plain (or a non-TTY stdout) take
+	// the non-interactive paths and fetch once up front.
+	if !flagJSON && !flagPlain && isTTY() {
+		m := tui.New(client, opts, flagWatch, time.Duration(flagRefresh)*time.Second)
+		m.SetOnlyAttention(flagOnlyAttention)
+		return tui.Run(m)
+	}
+
 	state, err := client.FetchState(ctx, opts)
 	if err != nil {
 		return err
 	}
-
 	if flagJSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		return enc.Encode(state)
 	}
-
-	// Placeholder text table until the TUI lands (Phase 2).
 	return renderText(os.Stdout, state)
+}
+
+func isTTY() bool {
+	fi, err := os.Stdout.Stat()
+	return err == nil && (fi.Mode()&os.ModeCharDevice) != 0
 }
 
 func renderText(w *os.File, st *model.State) error {

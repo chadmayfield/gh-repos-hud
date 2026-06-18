@@ -9,6 +9,7 @@ import (
 // Global flags (bound in init).
 var (
 	flagJSON          bool
+	flagPlain         bool
 	flagNoColor       bool
 	flagWatch         bool
 	flagOnlyAttention bool
@@ -40,6 +41,7 @@ func Execute(ctx context.Context) error {
 func init() {
 	f := rootCmd.PersistentFlags()
 	f.BoolVar(&flagJSON, "json", false, "output machine-readable JSON instead of the TUI")
+	f.BoolVar(&flagPlain, "plain", false, "print a plain text table instead of the TUI")
 	f.BoolVar(&flagNoColor, "no-color", false, "disable colored output")
 	f.BoolVar(&flagWatch, "watch", false, "auto-refresh on an interval")
 	f.BoolVar(&flagOnlyAttention, "only-attention", false, "show only repos needing attention (non-green)")
