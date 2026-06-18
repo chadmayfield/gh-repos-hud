@@ -13,6 +13,14 @@ import (
 type stateLoadedMsg struct{ state *model.State }
 type errMsg struct{ err error }
 type tickMsg struct{}
+type detailLoadedMsg struct{ detail model.RepoDetail }
+
+// detailCmd lazily fetches per-repo detail (exact ahead_by, alerts, PRs).
+func detailCmd(client *ghclient.Client, owner, name, tagSHA, headSHA string) tea.Cmd {
+	return func() tea.Msg {
+		return detailLoadedMsg{client.FetchRepoDetail(context.Background(), owner, name, tagSHA, headSHA)}
+	}
+}
 
 // loadCmd fetches a fresh snapshot off the UI thread.
 func loadCmd(client *ghclient.Client, opts ghclient.Options) tea.Cmd {

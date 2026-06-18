@@ -2,6 +2,7 @@
 package tui
 
 import (
+	"sort"
 	"strings"
 	"time"
 
@@ -10,6 +11,71 @@ import (
 	"github.com/chadmayfield/gh-repos-hud/internal/ghclient"
 	"github.com/chadmayfield/gh-repos-hud/internal/model"
 )
+
+// sortKey controls repo ordering within each org.
+type sortKey int
+
+const (
+	sortHealth sortKey = iota // attention-first (default)
+	sortName
+	sortUndeployed
+	sortAlerts
+)
+
+func (s sortKey) String() string {
+	switch s {
+	case sortName:
+		return "name"
+	case sortUndeployed:
+		return "undeployed"
+	case sortAlerts:
+		return "alerts"
+	default:
+		return "health"
+	}
+}
+
+// sortedRepoIndices returns repo indices ordered by the given key (name as a
+// stable tiebreaker). Indices, not repos, so row lookups stay valid.
+func sortedRepoIndices(repos []model.Repo, key sortKey) []int {
+	idx := make([]int, len(repos))
+	for i := range idx {
+		idx[i] = i
+	}
+	sort.SliceStable(idx, func(a, b int) bool {
+		ra, rb := repos[idx[a]], repos[idx[b]]
+		switch key {
+		case sortName:
+			return ra.Name < rb.Name
+		case sortUndeployed:
+			if undeployRank(ra) != undeployRank(rb) {
+				return undeployRank(ra) > undeployRank(rb)
+			}
+		case sortAlerts:
+			if ra.Dependabot.Total() != rb.Dependabot.Total() {
+				return ra.Dependabot.Total() > rb.Dependabot.Total()
+			}
+		default: // health: red>yellow>green>gray
+			if ra.Health != rb.Health {
+				return ra.Health > rb.Health
+			}
+		}
+		return ra.Name < rb.Name
+	})
+	return idx
+}
+
+// undeployRank sorts ">=1/exact" above 0 above untagged.
+func undeployRank(r model.Repo) int {
+	switch {
+	case r.Untagged:
+		return -1
+	case r.Undeployed != 0:
+		return 1000000 - r.Undeployed // -1 (unknown >=1) ranks highest
+	default:
+		return 0
+	}
+}
 
 type rowKind int
 
@@ -38,12 +104,15 @@ type Model struct {
 	filter        string
 	filtering     bool
 	onlyAttention bool
+	sortBy        sortKey
 
-	watch    bool
-	interval time.Duration
-	detail   bool
-	loading  bool
-	err      error
+	watch         bool
+	interval      time.Duration
+	detail        bool
+	detailData    *model.RepoDetail
+	detailLoading bool
+	loading       bool
+	err           error
 
 	scroll        int // index of the first visible row
 	width, height int
@@ -128,7 +197,8 @@ func (m *Model) rebuildRows() {
 		if !m.isExpanded(o.Name) {
 			continue
 		}
-		for ri, r := range o.Repos {
+		for _, ri := range sortedRepoIndices(o.Repos, m.sortBy) {
+			r := o.Repos[ri]
 			if m.onlyAttention && r.Health == model.HealthGreen {
 				continue
 			}
@@ -145,6 +215,14 @@ func (m *Model) rebuildRows() {
 		m.cursor = 0
 	}
 	m.clampScroll()
+}
+
+// lowGraphQLThreshold is the headroom below which auto-refresh backs off.
+const lowGraphQLThreshold = 100
+
+// graphqlOK reports whether there's enough GraphQL headroom to auto-refresh.
+func (m Model) graphqlOK() bool {
+	return m.state == nil || m.state.RateLimit.GraphQLRemaining > lowGraphQLThreshold
 }
 
 // isExpanded reports whether an org is expanded (default: expanded).

@@ -33,6 +33,10 @@ func (m Model) View() string {
 	if m.onlyAttention {
 		title += "   [attention-only]"
 	}
+	title += "   sort:" + m.sortBy.String()
+	if m.watch && !m.graphqlOK() {
+		title += styleWarn.Render("   [auto-refresh paused: low GraphQL]")
+	}
 	b.WriteString(styleHeader.Render(title) + "\n")
 	// Sticky column header (stays visible while the list scrolls below it).
 	b.WriteString("  " + styleDim.Render(headerRow()) + "\n")
@@ -136,15 +140,69 @@ func (m Model) viewDetail() string {
 	fmt.Fprintf(&b, "  health        %s %s\n", glyph(r.Health), r.Health)
 	fmt.Fprintf(&b, "  branch        %s @ %s   CI: %s\n", dashIfEmpty(r.DefaultBranch), r.ShortSHA, r.CI)
 	fmt.Fprintf(&b, "  tag/release   %s / %s\n", dashIfEmpty(r.LatestTag), dashIfEmpty(r.LatestRelease))
-	fmt.Fprintf(&b, "  undeployed    %s\n", r.UndeployedLabel())
+	undep := r.UndeployedLabel()
+	if m.detailData != nil && m.detailData.AheadKnown && !r.Untagged {
+		undep = fmt.Sprintf("%d commit(s) since %s", m.detailData.AheadBy, dashIfEmpty(r.LatestTag))
+	}
+	fmt.Fprintf(&b, "  undeployed    %s\n", undep)
 	fmt.Fprintf(&b, "  dependabot    crit=%d high=%d mod=%d low=%d  (enabled=%v)\n",
 		r.Dependabot.Critical, r.Dependabot.High, r.Dependabot.Moderate, r.Dependabot.Low, r.DependabotEnabled)
 	fmt.Fprintf(&b, "  code scan     %s\n", scanCell(r.CodeScanEnabled, r.CodeScanning))
 	fmt.Fprintf(&b, "  secret scan   %s\n", scanCell(r.SecretScanEnabled, r.SecretScanning))
 	fmt.Fprintf(&b, "  open PRs      total=%d  bot=%d human=%d  mergeable=%d ci-green=%d draft=%d\n",
 		r.PRs.Total, r.PRs.Bot, r.PRs.Human, r.PRs.Mergeable, r.PRs.CIGreen, r.PRs.Draft)
+	// Lazily-loaded alert + PR lists.
+	b.WriteString("\n")
+	if m.detailLoading {
+		b.WriteString(styleDim.Render("  loading alerts + PRs...") + "\n")
+	} else if d := m.detailData; d != nil {
+		if len(d.Alerts) == 0 {
+			b.WriteString(styleDim.Render("  no open alerts") + "\n")
+		} else {
+			b.WriteString(styleKey.Render("  open alerts:") + "\n")
+			for _, a := range d.Alerts {
+				sev := lipgloss.NewStyle().Foreground(sevColor(a.Severity)).Render(pad(strings.ToUpper(a.Severity), 8))
+				fmt.Fprintf(&b, "    %s %s  %s\n", sev, pad(trunc(a.Package, 18), 18), trunc(a.Summary, m.width-36))
+			}
+		}
+		if len(d.PRs) > 0 {
+			b.WriteString(styleKey.Render("  open PRs:") + "\n")
+			for _, p := range d.PRs {
+				draft := ""
+				if p.Draft {
+					draft = styleDim.Render(" (draft)")
+				}
+				fmt.Fprintf(&b, "    #%-5d %s%s\n", p.Number, trunc(p.Title, m.width-18), draft)
+			}
+		}
+	}
 	b.WriteString("\n" + styleFooter.Render("  enter/esc back   o open in browser   q quit"))
 	return b.String()
+}
+
+func sevColor(sev string) lipgloss.Color {
+	switch strings.ToLower(sev) {
+	case "critical", "high":
+		return colRed
+	case "moderate", "medium":
+		return colYellow
+	default:
+		return colGray
+	}
+}
+
+// trunc shortens s to at most n visible columns (no padding).
+func trunc(s string, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	if len(s) > n {
+		if n <= 1 {
+			return s[:n]
+		}
+		return s[:n-1] + "~"
+	}
+	return s
 }
 
 func (m Model) footer() string {
@@ -167,7 +225,7 @@ func (m Model) footer() string {
 		lipgloss.NewStyle().Foreground(colRed).Render("[!!] CI-fail or crit/high") + "  " +
 		styleDim.Render("[?] unknown")
 	cols := "cols: DEP=crit/high/mod/low   UNDEP=commits since last tag   PR=bot/human   CODE/SEC=scan alerts (? = off)"
-	keys := "j/k move   space/pgdn page   g/G top/bottom   enter drill   tab fold   / filter   a attn   o open   r refresh   q quit"
+	keys := "j/k move   space/pgdn page   g/G top/bottom   enter drill   tab fold   / filter   s sort   a attn   o open   r refresh   q quit"
 	return styleFooter.Render("  ") + strings.Join(parts, "   ") + "\n" +
 		"  " + legend + "\n" +
 		styleFooter.Render("  "+cols) + "\n" +

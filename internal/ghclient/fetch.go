@@ -44,25 +44,25 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 	results := make([]model.Owner, len(owners))
 	warns := make([][]model.Warning, len(owners))
 	costs := make([]int, len(owners))
+	ownerErrs := make([]error, len(owners))
 
-	g, gctx := errgroup.WithContext(ctx)
+	// Per-owner isolation: one owner failing (e.g. a rate-limit hit) becomes a
+	// warning, not a whole-fetch abort, so the owners that loaded still show.
+	g := new(errgroup.Group)
 	g.SetLimit(6)
 	for i, o := range owners {
 		i, o := i, o
 		g.Go(func() error {
-			owner, w, cost, err := c.fetchOwner(gctx, o, opts)
+			owner, w, cost, err := c.fetchOwner(ctx, o, opts)
 			if err != nil {
-				return err
+				ownerErrs[i] = err
+				return nil
 			}
-			results[i] = owner
-			warns[i] = w
-			costs[i] = cost
+			results[i], warns[i], costs[i] = owner, w, cost
 			return nil
 		})
 	}
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
+	_ = g.Wait()
 
 	state := &model.State{FetchedAt: time.Now()}
 	for _, o := range results {
@@ -72,6 +72,11 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 	}
 	for _, w := range warns {
 		state.Warnings = append(state.Warnings, w...)
+	}
+	for i, e := range ownerErrs {
+		if e != nil {
+			state.Warnings = append(state.Warnings, model.Warning{Owner: owners[i].Name, Feature: "fetch", Reason: e.Error()})
+		}
 	}
 	state.RateLimit = c.rateLimit(ctx)
 	for _, cost := range costs {

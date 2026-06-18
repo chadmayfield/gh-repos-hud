@@ -135,6 +135,30 @@ type Repo struct {
 	Warnings   []string `json:"warnings,omitempty"`
 }
 
+// AlertDetail is one open Dependabot alert, for the drill-in pane.
+type AlertDetail struct {
+	Package  string `json:"package"`
+	Severity string `json:"severity"`
+	Summary  string `json:"summary"`
+	URL      string `json:"url"`
+}
+
+// PRDetail is one open pull request, for the drill-in pane.
+type PRDetail struct {
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	URL    string `json:"url"`
+	Draft  bool   `json:"draft"`
+}
+
+// RepoDetail is lazily fetched when a repo is drilled into.
+type RepoDetail struct {
+	AheadBy    int  // exact commits since the latest tag
+	AheadKnown bool // false until the compare call resolves
+	Alerts     []AlertDetail
+	PRs        []PRDetail
+}
+
 // Billing is org-level GHAS spend (the paid-features guard).
 type Billing struct {
 	Known                      bool `json:"known"`

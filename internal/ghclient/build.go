@@ -1,10 +1,17 @@
 package ghclient
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/chadmayfield/gh-repos-hud/internal/model"
 )
+
+// versionTagRe matches release-style tags (v1.2.3, 1.2, v0.1.0) but not
+// milestone tags like mvp-1. Only these count as deployment baselines.
+var versionTagRe = regexp.MustCompile(`^v?\d+\.\d+`)
+
+func isVersionTag(name string) bool { return versionTagRe.MatchString(name) }
 
 var botLogins = map[string]bool{
 	"dependabot": true, "dependabot[bot]": true,
@@ -74,29 +81,33 @@ func buildRepo(n gqlRepoNode, codeCount, secretCount int, codeAvail, secretAvail
 		}
 	}
 
-	// Latest tag / release and its commit SHA.
-	if n.LatestRelease != nil {
+	// Latest *version* tag (semver-ish only) and its commit SHA. Milestone
+	// tags like mvp-1 are ignored so they don't show as perpetually undeployed.
+	if n.LatestRelease != nil && isVersionTag(n.LatestRelease.TagName) {
 		r.LatestRelease = n.LatestRelease.TagName
 	}
 	var tagName, tagSHA string
-	if len(n.Refs.Nodes) > 0 {
-		tagName = n.Refs.Nodes[0].Name
-		tagSHA = n.Refs.Nodes[0].Target.commitSHA()
-		if r.LatestRelease != "" {
-			for _, ref := range n.Refs.Nodes {
-				if ref.Name == r.LatestRelease {
-					tagSHA = ref.Target.commitSHA()
-					break
-				}
+	for _, ref := range n.Refs.Nodes { // refs are TAG_COMMIT_DATE desc
+		if isVersionTag(ref.Name) {
+			tagName = ref.Name
+			tagSHA = ref.Target.commitSHA()
+			break
+		}
+	}
+	if r.LatestRelease != "" { // prefer the release's exact ref if present
+		for _, ref := range n.Refs.Nodes {
+			if ref.Name == r.LatestRelease {
+				tagName, tagSHA = ref.Name, ref.Target.commitSHA()
+				break
 			}
 		}
 	}
 	r.LatestTag = tagName
 	r.TagSHA = tagSHA
 
-	// Undeployed: commits on default branch since the latest tag.
+	// Undeployed: commits on default branch since the latest version tag.
 	switch {
-	case tagName == "" && r.LatestRelease == "":
+	case tagName == "":
 		r.Untagged = true
 		r.Undeployed = 0
 	case r.HeadSHA != "" && tagSHA != "" && r.HeadSHA == tagSHA:

@@ -28,9 +28,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		return m, nil
 
+	case detailLoadedMsg:
+		d := msg.detail
+		m.detailData = &d
+		m.detailLoading = false
+		return m, nil
+
 	case tickMsg:
 		var cmds []tea.Cmd
-		if m.watch && !m.loading {
+		// Back off auto-refresh when GraphQL headroom is low (manual 'r' still works).
+		if m.watch && !m.loading && m.graphqlOK() {
 			m.loading = true
 			cmds = append(cmds, loadCmd(m.client, freshOpts(m.opts)))
 		}
@@ -119,10 +126,16 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			name := m.state.Owners[r.ownerIdx].Name
 			m.expanded[name] = !m.isExpanded(name)
 			m.rebuildRows()
-		} else {
-			m.detail = true
+			m.clampScroll()
+			return m, nil
 		}
-		return m, nil
+		// Drill into a repo: open the pane and lazily fetch its detail.
+		m.detail = true
+		m.detailData = nil
+		m.detailLoading = true
+		owner := m.state.Owners[r.ownerIdx].Name
+		repo := m.state.Owners[r.ownerIdx].Repos[r.repoIdx]
+		return m, detailCmd(m.client, owner, repo.Name, repo.TagSHA, repo.HeadSHA)
 	case "tab":
 		if len(m.rows) > 0 {
 			name := m.state.Owners[m.rows[m.cursor].ownerIdx].Name
@@ -134,6 +147,11 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "a":
 		m.onlyAttention = !m.onlyAttention
 		m.rebuildRows()
+		return m, nil
+	case "s":
+		m.sortBy = (m.sortBy + 1) % 4
+		m.rebuildRows()
+		m.clampScroll()
 		return m, nil
 	case "r":
 		if !m.loading {
