@@ -83,7 +83,18 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 	for _, cost := range costs {
 		state.RateLimit.GraphQLCost += cost
 	}
-	saveCache(state)
+	// Only cache a clean, unfiltered fetch — never a partial (rate-limited /
+	// per-owner-failed) or org-filtered run, so the default never serves a
+	// truncated snapshot later.
+	clean := len(opts.IncludeOrgs) == 0 && len(opts.ExcludeOrgs) == 0
+	for _, e := range ownerErrs {
+		if e != nil {
+			clean = false
+		}
+	}
+	if clean {
+		saveCache(state)
+	}
 	return state, nil
 }
 

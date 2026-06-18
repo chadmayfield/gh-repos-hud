@@ -23,7 +23,17 @@ func cachePath() (string, error) {
 	return filepath.Join(dir, "gh-repos-hud", "state.gob"), nil
 }
 
-// loadCache returns the cached state if it exists and is younger than ttl.
+// cacheVersion is bumped whenever the cached model shape changes, so a binary
+// never decodes an incompatible older cache (which could yield partial data).
+const cacheVersion = 2
+
+type cacheEnvelope struct {
+	Version int
+	State   model.State
+}
+
+// loadCache returns the cached state if it exists, is younger than ttl, and was
+// written by a matching cache version.
 func loadCache(ttl time.Duration) (*model.State, bool) {
 	p, err := cachePath()
 	if err != nil {
@@ -38,12 +48,12 @@ func loadCache(ttl time.Duration) (*model.State, bool) {
 		return nil, false
 	}
 	defer f.Close()
-	var st model.State
-	if err := gob.NewDecoder(f).Decode(&st); err != nil {
+	var env cacheEnvelope
+	if err := gob.NewDecoder(f).Decode(&env); err != nil || env.Version != cacheVersion {
 		return nil, false
 	}
-	st.FromCache = true
-	return &st, true
+	env.State.FromCache = true
+	return &env.State, true
 }
 
 // saveCache best-effort writes the snapshot; errors are non-fatal.
@@ -60,5 +70,5 @@ func saveCache(st *model.State) {
 		return
 	}
 	defer f.Close()
-	_ = gob.NewEncoder(f).Encode(st)
+	_ = gob.NewEncoder(f).Encode(cacheEnvelope{Version: cacheVersion, State: *st})
 }
