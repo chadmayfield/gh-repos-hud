@@ -13,3 +13,6 @@ coverage.*
 .DS_Store
 .idea/
 .vscode/
+
+# Local git backup bundles (never commit these)
+*.bundle

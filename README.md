@@ -48,12 +48,30 @@ Requires a `gh` login with at least `repo` and `read:org` scopes;
 `security_events` / `admin:org` enable the code/secret-scanning and GHAS-billing
 columns (missing scopes degrade those cells to `?` rather than failing).
 
-## Build from source
+## Install from source
+
+Instead of the precompiled release, clone and install locally:
 
 ```sh
-make build      # -> ./gh-repos-hud
-make install    # gh extension install . (run as `gh repos-hud`)
-make test lint vuln
+git clone https://github.com/chadmayfield/gh-repos-hud
+cd gh-repos-hud
+make install        # builds ./gh-repos-hud, then runs `gh extension install .`
+```
+
+`gh repos-hud` is then available. Without `make`:
+
+```sh
+go build -o gh-repos-hud .
+gh extension install .
+```
+
+To update later, pull and re-run `make install` — a bare `gh extension install .`
+reuses the already-built binary, so the binary must be rebuilt first.
+
+### Development
+
+```sh
+make test lint vuln   # race tests; vet + golangci-lint; govulncheck
 ```
 
 ## Demo
