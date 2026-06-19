@@ -15,7 +15,19 @@ One glance shows, per repo, grouped by org:
 
 Auth is sourced from `gh` — **no token is ever embedded or stored** by this tool.
 
-## Install
+## Table of contents
+
+- [Quick install](#quick-install)
+- [Usage](#usage)
+- [Install from source](#install-from-source)
+- [Verifying a release](#verifying-a-release)
+- [Demo](#demo)
+- [License](#license)
+
+## Quick install
+
+Install the latest precompiled release (signed and attested — see
+[Verifying a release](#verifying-a-release)):
 
 ```sh
 gh extension install chadmayfield/gh-repos-hud
@@ -74,6 +86,21 @@ reuses the already-built binary, so the binary must be rebuilt first.
 make test lint vuln   # race tests; vet + golangci-lint; govulncheck
 ```
 
+## Verifying a release
+
+Each release attaches `checksums.txt` (SHA-256 of every binary) with a detached
+GPG signature `checksums.txt.sig`, plus a Sigstore build-provenance attestation.
+
+```sh
+# GPG signature over the checksums (import the public key once)
+gpg --import docs/release-signing-key.asc
+gpg --verify checksums.txt.sig checksums.txt
+shasum -a 256 -c checksums.txt        # then verify your downloaded asset
+
+# Build provenance — proves the asset was built by this repo's release workflow
+gh attestation verify <downloaded-asset> --repo chadmayfield/gh-repos-hud
+```
+
 ## Demo
 
 `--demo` renders a built-in synthetic dataset — two fictional orgs and ten
@@ -96,21 +123,6 @@ The local web dashboard (`gh repos-hud serve`):
 
 The TUI image is regenerated with [vhs](https://github.com/charmbracelet/vhs):
 `vhs docs/demo-tui.tape`.
-
-## Verifying a release
-
-Each release attaches `checksums.txt` (SHA-256 of every binary) with a detached
-GPG signature `checksums.txt.sig`, plus a Sigstore build-provenance attestation.
-
-```sh
-# GPG signature over the checksums (import the public key once)
-gpg --import docs/release-signing-key.asc
-gpg --verify checksums.txt.sig checksums.txt
-shasum -a 256 -c checksums.txt        # then verify your downloaded asset
-
-# Build provenance — proves the asset was built by this repo's release workflow
-gh attestation verify <downloaded-asset> --repo chadmayfield/gh-repos-hud
-```
 
 ## License
 
