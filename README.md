@@ -28,9 +28,10 @@ gh repos-hud                      # interactive TUI (default)
 gh repos-hud serve --port 8787    # local web dashboard at http://127.0.0.1:8787
 gh repos-hud serve --watch        # web dashboard that auto-refreshes (default: on-demand)
 gh repos-hud --json               # machine-readable snapshot
-gh repos-hud --org acme       # limit to specific orgs (repeatable)
+gh repos-hud --org my-org         # limit to specific orgs (repeatable)
 gh repos-hud --only-attention     # only repos needing attention (non-green)
 gh repos-hud --watch              # TUI auto-refresh (default: manual 'r' only)
+gh repos-hud --demo               # synthetic data — try it without your own repos
 ```
 
 **TUI keys:** `j/k` move · `space`/`pgdn`/`g`/`G` page · `enter` drill in (alerts/PRs) ·
@@ -54,6 +55,29 @@ make build      # -> ./gh-repos-hud
 make install    # gh extension install . (run as `gh repos-hud`)
 make test lint vuln
 ```
+
+## Demo
+
+`--demo` renders a built-in synthetic dataset — two fictional orgs and ten
+repositories engineered to exercise every column and health state — instead of
+querying GitHub. It needs no network access and touches no real repository, so
+it's useful for trying the HUD, demos, and regenerating the images below:
+
+```sh
+gh repos-hud --demo               # TUI with synthetic data
+gh repos-hud serve --demo         # web dashboard with synthetic data
+```
+
+The interactive TUI:
+
+![gh-repos-hud TUI](docs/demo-tui.png)
+
+The local web dashboard (`gh repos-hud serve`):
+
+![gh-repos-hud web dashboard](docs/demo-web.png)
+
+The TUI image is regenerated with [vhs](https://github.com/charmbracelet/vhs):
+`vhs docs/demo-tui.tape`.
 
 ## License
 

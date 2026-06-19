@@ -19,6 +19,9 @@ type Options struct {
 	ExcludeArchived bool
 	NoCache         bool
 	CacheTTL        time.Duration
+	// Demo short-circuits the fetch to a synthetic, fictional snapshot — for
+	// screenshots and trying the HUD without touching real repos.
+	Demo bool
 }
 
 // DefaultOptions returns sensible defaults: all orgs + personal, no archived,
@@ -31,6 +34,11 @@ func DefaultOptions() Options {
 // Unless NoCache is set, a fresh-enough on-disk snapshot is reused to avoid
 // re-spending the point-metered GraphQL budget.
 func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, error) {
+	// Demo mode returns before anything touches the network, cache, or even the
+	// client receiver — so it works regardless of auth or rate limits.
+	if opts.Demo {
+		return demoState(), nil
+	}
 	if !opts.NoCache && opts.CacheTTL > 0 {
 		if st, ok := loadCache(opts.CacheTTL); ok {
 			return st, nil
