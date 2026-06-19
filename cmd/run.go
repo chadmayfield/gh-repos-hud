@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"text/tabwriter"
 	"time"
@@ -14,9 +15,15 @@ import (
 )
 
 func runRoot(ctx context.Context, opts ghclient.Options, interval time.Duration) error {
-	client, err := ghclient.New()
-	if err != nil {
-		return err
+	// Demo mode renders a synthetic snapshot and never calls the API, so it
+	// doesn't need a gh-authenticated client.
+	var client *ghclient.Client
+	if !opts.Demo {
+		var err error
+		client, err = ghclient.New()
+		if err != nil {
+			return err
+		}
 	}
 
 	// Interactive TUI by default; --json / --plain (or a non-TTY stdout) take
@@ -44,7 +51,7 @@ func isTTY() bool {
 	return err == nil && (fi.Mode()&os.ModeCharDevice) != 0
 }
 
-func renderText(w *os.File, st *model.State) error {
+func renderText(w io.Writer, st *model.State) error {
 	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
 	for _, o := range st.Owners {
 		label := o.Name

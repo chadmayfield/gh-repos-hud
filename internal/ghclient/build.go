@@ -94,7 +94,9 @@ func buildRepo(n gqlRepoNode) model.Repo {
 		r.ShortSHA = "-"
 	}
 
-	// Dependabot severity breakdown (total authoritative from totalCount).
+	// Dependabot severity breakdown, counted from the returned alert nodes
+	// (capped at the query's first:100 — repos with more open alerts than that
+	// would undercount, but that is rare in practice).
 	for _, a := range n.VulnerabilityAlerts.Nodes {
 		switch strings.ToUpper(a.SecurityVulnerability.Severity) {
 		case "CRITICAL":

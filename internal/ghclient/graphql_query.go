@@ -33,7 +33,7 @@ fragment repoFields on Repository {
       }
     }
   }
-  vulnerabilityAlerts(states: OPEN, first: 50) {
+  vulnerabilityAlerts(states: OPEN, first: 100) {
     totalCount
     nodes { securityVulnerability { severity } }
   }

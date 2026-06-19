@@ -132,6 +132,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Drill into a repo: open the pane and lazily fetch its detail.
 		m.detail = true
 		m.detailData = nil
+		// Demo mode has no live client, so skip the detail fetch and just show
+		// the summary the snapshot already carries.
+		if m.opts.Demo {
+			m.detailLoading = false
+			return m, nil
+		}
 		m.detailLoading = true
 		owner := m.state.Owners[r.ownerIdx].Name
 		repo := m.state.Owners[r.ownerIdx].Repos[r.repoIdx]

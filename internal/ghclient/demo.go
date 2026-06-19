@@ -64,7 +64,7 @@ func demoState() *model.State {
 					// GREEN: untagged side project.
 					{Name: "ml-toolkit", Private: false, ShortSHA: "f47c3d0", CI: model.CISuccess, Untagged: true,
 						CodeScan: model.ScanOff, SecretScan: model.ScanOn},
-					// GRAY: no CI configured, nothing to report.
+					// GREEN: a quiet side project — no CI run, no alerts, nothing to flag.
 					{Name: "scratchpad", Private: false, ShortSHA: "0a55e2b", CI: model.CINone, Untagged: true,
 						CodeScan: model.ScanOff, SecretScan: model.ScanOff},
 				}),

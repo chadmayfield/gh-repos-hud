@@ -62,10 +62,12 @@ func saveCache(st *model.State) {
 	if err != nil {
 		return
 	}
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+	// 0700 dir / 0600 file: the snapshot contains private repo names and alert
+	// counts, so keep it readable only by the owner (not world-readable).
+	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 		return
 	}
-	f, err := os.Create(p)
+	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return
 	}

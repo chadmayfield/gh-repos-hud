@@ -17,11 +17,17 @@ var serveCmd = &cobra.Command{
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		client, err := ghclient.New()
-		if err != nil {
-			return err
-		}
 		opts, interval, port := resolveOptions(cmd)
+		// Demo mode serves a synthetic snapshot and never calls the API, so it
+		// doesn't need a gh-authenticated client.
+		var client *ghclient.Client
+		if !opts.Demo {
+			var err error
+			client, err = ghclient.New()
+			if err != nil {
+				return err
+			}
+		}
 		// Default: on-demand fetch per request (cached); --watch enables the
 		// background poller + page auto-refresh.
 		return web.Serve(cmd.Context(), client, opts, port, interval, flagWatch)

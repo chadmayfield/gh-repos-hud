@@ -72,7 +72,7 @@ func Serve(ctx context.Context, client *ghclient.Client, opts ghclient.Options, 
 		return fmt.Errorf("listen %s: %w", addr, err)
 	}
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           loopbackOnly(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() {
@@ -87,6 +87,25 @@ func Serve(ctx context.Context, client *ghclient.Client, opts ghclient.Options, 
 		return err
 	}
 	return nil
+}
+
+// loopbackOnly rejects any request whose Host header is not a loopback name.
+// The listener is already bound to 127.0.0.1, but this is defense-in-depth
+// against DNS-rebinding, where a hostname an attacker controls is repointed at
+// 127.0.0.1 to reach this server from a browser.
+func loopbackOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		switch host {
+		case "127.0.0.1", "localhost", "::1":
+			next.ServeHTTP(w, r)
+		default:
+			http.Error(w, "forbidden: non-loopback Host", http.StatusForbidden)
+		}
+	})
 }
 
 func (s *Server) poll(ctx context.Context) {

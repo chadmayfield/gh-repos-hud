@@ -30,8 +30,9 @@ changing it:
   `cli/go-gh` library. No token is ever read from the source, embedded in the
   binary, written to the cache, or logged.
 - **Loopback-only web server.** `gh repos-hud serve` binds to `127.0.0.1`
-  only and refuses non-loopback addresses; it is not intended to be exposed to
-  a network.
+  only — the bind address is not configurable — and additionally rejects any
+  request whose `Host` header is not a loopback name (defense-in-depth against
+  DNS-rebinding). It is not intended to be exposed to a network.
 - **Read-only.** The tool only issues GitHub read queries (repository health,
   alerts, PR metadata). It does not modify repositories.
 - **Local cache.** The on-disk snapshot under the user cache directory contains

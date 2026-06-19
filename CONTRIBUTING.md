@@ -23,7 +23,9 @@ copies the existing prebuilt binary instead of rebuilding. Confirm with
 ## Before opening a pull request
 
 - Target the `main` branch.
-- Make sure `make test lint` passes; CI runs the same checks and must be green.
+- Make sure `make test lint` passes. CI runs `gofmt`, `go vet`, the tests, the
+  build, and `govulncheck` (advisory) and must be green; `make lint`
+  additionally runs `golangci-lint` locally.
 - Keep changes focused; describe the motivation in the PR.
 - Add or update tests for behavior changes (`httptest` fixtures for the
   GitHub client, table tests for derived model logic).
