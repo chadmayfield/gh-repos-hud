@@ -54,3 +54,7 @@ make build      # -> ./gh-repos-hud
 make install    # gh extension install . (run as `gh repos-hud`)
 make test lint vuln
 ```
+
+## License
+
+[MIT](LICENSE)
