@@ -79,6 +79,21 @@ The local web dashboard (`gh repos-hud serve`):
 The TUI image is regenerated with [vhs](https://github.com/charmbracelet/vhs):
 `vhs docs/demo-tui.tape`.
 
+## Verifying a release
+
+Each release attaches `checksums.txt` (SHA-256 of every binary) with a detached
+GPG signature `checksums.txt.sig`, plus a Sigstore build-provenance attestation.
+
+```sh
+# GPG signature over the checksums (import the public key once)
+gpg --import docs/release-signing-key.asc
+gpg --verify checksums.txt.sig checksums.txt
+shasum -a 256 -c checksums.txt        # then verify your downloaded asset
+
+# Build provenance — proves the asset was built by this repo's release workflow
+gh attestation verify <downloaded-asset> --repo chadmayfield/gh-repos-hud
+```
+
 ## License
 
 [MIT](LICENSE)

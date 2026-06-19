@@ -2,19 +2,31 @@ name: release
 
 # Tag-triggered cross-platform build. cli/gh-extension-precompile builds the
 # Go binaries for every platform and attaches them to the release with the
-# names `gh extension install` expects.
+# names `gh extension install` expects. checksums.txt is GPG-signed with the
+# dedicated release key (the GPG_PRIVATE_KEY repo secret; public half is
+# docs/release-signing-key.asc), and build provenance is attested via Sigstore.
 on:
   push:
     tags: ["v*"]
 
 permissions:
-  contents: write
+  contents: write     # create the release and upload assets
+  id-token: write     # OIDC identity for build-provenance attestations
+  attestations: write # write the attestations
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      # Import the dedicated release signing key. The runner's keyring starts
+      # empty, so this becomes the default key gpg signs checksums.txt with.
+      - name: Import release signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: echo "$GPG_PRIVATE_KEY" | gpg --batch --import
       - uses: cli/gh-extension-precompile@9e2237c30f869ad3bcaed6a4be2cd43564dd421b # v2.1.0
         with:
           go_version_file: go.mod
+          gpg_fingerprint: 1A432A363317712505B3974CB00FCBF4A2C11E11
+          generate_attestations: "true"
