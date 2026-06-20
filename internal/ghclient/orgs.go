@@ -9,9 +9,10 @@ type ownerRef struct {
 }
 
 // DiscoverOwners returns the personal account plus every org the user belongs
-// to. If include is non-empty, only those owner names are kept; names in
-// exclude are always dropped. If includePersonal is false, the personal
-// account is dropped.
+// to. If include is non-empty, it filters the *orgs* to those names only — the
+// personal account is governed by includePersonal, not the org whitelist, so
+// `--org foo` still shows your personal repos. Names in exclude are always
+// dropped (personal included); includePersonal=false drops the personal account.
 func (c *Client) DiscoverOwners(ctx context.Context, include, exclude []string, includePersonal bool) ([]ownerRef, error) {
 	me, err := restGet[struct {
 		Login string `json:"login"`
@@ -35,14 +36,15 @@ func (c *Client) DiscoverOwners(ctx context.Context, include, exclude []string, 
 	for _, n := range exclude {
 		skip[n] = true
 	}
-	keep := func(name string) bool { return (len(want) == 0 || want[name]) && !skip[name] }
-
 	var owners []ownerRef
-	if includePersonal && me.Login != "" && keep(me.Login) {
+	// Personal account: gated by includePersonal + exclude, NOT the org
+	// whitelist — so naming orgs with --org doesn't silently hide your repos.
+	if includePersonal && me.Login != "" && !skip[me.Login] {
 		owners = append(owners, ownerRef{Name: me.Login, IsUser: true})
 	}
+	// Orgs: the include whitelist (if any) applies here.
 	for _, o := range orgs {
-		if keep(o.Login) {
+		if (len(want) == 0 || want[o.Login]) && !skip[o.Login] {
 			owners = append(owners, ownerRef{Name: o.Login, IsUser: false})
 		}
 	}

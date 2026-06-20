@@ -52,14 +52,27 @@ func TestDiscoverOwners(t *testing.T) {
 		}
 	})
 
-	t.Run("include keeps only named", func(t *testing.T) {
+	t.Run("include filters orgs but keeps personal", func(t *testing.T) {
+		// --org o1 narrows the orgs to o1, but the personal account stays
+		// (the whitelist applies to orgs only, not to personal).
 		owners, err := c.DiscoverOwners(ctx, []string{"o1"}, nil, true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		got := ownerNames(owners)
+		if len(owners) != 2 || !got["me"] || !got["o1"] || got["o2"] {
+			t.Errorf("include owners = %+v, want me+o1 (personal kept, o2 dropped)", owners)
+		}
+	})
+
+	t.Run("include with no personal = only named orgs", func(t *testing.T) {
+		owners, err := c.DiscoverOwners(ctx, []string{"o1"}, nil, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := ownerNames(owners)
 		if len(owners) != 1 || !got["o1"] {
-			t.Errorf("include owners = %+v, want only o1", owners)
+			t.Errorf("include+no-personal owners = %+v, want only o1", owners)
 		}
 	})
 
