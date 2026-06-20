@@ -93,12 +93,15 @@ Each release attaches `checksums.txt` (SHA-256 of every binary) with a detached
 GPG signature `checksums.txt.sig`, plus a Sigstore build-provenance attestation.
 
 ```sh
-# GPG signature over the checksums (import the public key once)
+# Import the release signing key once, then verify the checksums file:
 gpg --import docs/release-signing-key.asc
 gpg --verify checksums.txt.sig checksums.txt
-shasum -a 256 -c checksums.txt        # then verify your downloaded asset
 
-# Build provenance — proves the asset was built by this repo's release workflow
+# checksums.txt lists each binary as dist/<name>; confirm your downloaded asset
+# matches the hash on its line:
+shasum -a 256 <downloaded-asset>
+
+# Build provenance (proves the asset was built by this repo's release workflow):
 gh attestation verify <downloaded-asset> --repo chadmayfield/gh-repos-hud
 ```
 
