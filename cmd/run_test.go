@@ -68,3 +68,13 @@ func TestResolveOptionsDefaults(t *testing.T) {
 		t.Errorf("interval/port should be non-zero: %v %d", interval, port)
 	}
 }
+
+func TestResolveOptionsArchived(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	flagArchived = true
+	t.Cleanup(func() { flagArchived = false })
+	opts, _, _ := resolveOptions(rootCmd)
+	if opts.ExcludeArchived {
+		t.Error("--archived should set ExcludeArchived=false")
+	}
+}

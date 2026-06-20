@@ -69,7 +69,7 @@ func renderText(w io.Writer, st *model.State) error {
 				name += " (pub)"
 			}
 			fmt.Fprintf(tw, "  %s\t%s\t%s\t%s\t%s\t%d/%d/%d/%d\t%s\t%s\t%s\t%d/%d\n",
-				r.Health.Glyph(), name, r.CI.Short(), r.ShortSHA, tagOrDash(r.LatestTag),
+				r.StatusGlyph(), name, r.CI.Short(), r.ShortSHA, tagOrDash(r.LatestTag),
 				r.Dependabot.Critical, r.Dependabot.High, r.Dependabot.Moderate, r.Dependabot.Low,
 				r.CodeScan.Cell(r.CodeScanning), r.SecretScan.Cell(r.SecretScanning),
 				r.UndeployedLabel(), r.PRs.Bot, r.PRs.Human)

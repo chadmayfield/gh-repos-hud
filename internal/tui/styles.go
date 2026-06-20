@@ -42,6 +42,16 @@ func glyph(h model.Health) string {
 	return lipgloss.NewStyle().Foreground(healthColor(h)).Render(pad(h.Glyph(), 4))
 }
 
+// repoGlyph renders the colored status marker for a repo: the health glyph, or
+// a dim [AR] for archived repos (frozen, not unknown).
+func repoGlyph(r model.Repo) string {
+	col := colGray
+	if !r.Archived {
+		col = healthColor(r.Health)
+	}
+	return lipgloss.NewStyle().Foreground(col).Render(pad(r.StatusGlyph(), 4))
+}
+
 // visGlyph is a 1-char visibility marker: a highlighted "P" for public repos,
 // a dim dot for private (the common case) — small and unobtrusive.
 func visGlyph(private bool) string {

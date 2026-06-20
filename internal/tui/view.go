@@ -121,7 +121,7 @@ func repoLine(r model.Repo) string {
 	dep := fmt.Sprintf("%d/%d/%d/%d", r.Dependabot.Critical, r.Dependabot.High, r.Dependabot.Moderate, r.Dependabot.Low)
 	pr := fmt.Sprintf("%d/%d", r.PRs.Bot, r.PRs.Human)
 	return fmt.Sprintf("%s %s %s %s %s %s %s %s %s %s %s",
-		glyph(r.Health), visGlyph(r.Private), pad(r.Name, 26), ciStyled(r.CI), pad(r.ShortSHA, 8),
+		repoGlyph(r), visGlyph(r.Private), pad(r.Name, 26), ciStyled(r.CI), pad(r.ShortSHA, 8),
 		pad(dashIfEmpty(r.LatestTag), 11), pad(dep, 11),
 		pad(r.CodeScan.Cell(r.CodeScanning), 4),
 		pad(r.SecretScan.Cell(r.SecretScanning), 4),
@@ -137,7 +137,7 @@ func (m Model) viewDetail() string {
 	}
 	var b strings.Builder
 	b.WriteString(styleHeader.Render(r.Name) + "  " + styleDim.Render(r.URL) + "\n\n")
-	fmt.Fprintf(&b, "  health        %s %s\n", glyph(r.Health), r.Health)
+	fmt.Fprintf(&b, "  health        %s %s\n", repoGlyph(*r), r.StatusName())
 	fmt.Fprintf(&b, "  branch        %s @ %s   CI: %s\n", dashIfEmpty(r.DefaultBranch), r.ShortSHA, r.CI)
 	fmt.Fprintf(&b, "  tag/release   %s / %s\n", dashIfEmpty(r.LatestTag), dashIfEmpty(r.LatestRelease))
 	undep := r.UndeployedLabel()
@@ -223,7 +223,8 @@ func (m Model) footer() string {
 		lipgloss.NewStyle().Foreground(colGreen).Render("[OK] ok") + "  " +
 		lipgloss.NewStyle().Foreground(colYellow).Render("[~] attention") + "  " +
 		lipgloss.NewStyle().Foreground(colRed).Render("[!!] CI-fail or crit/high") + "  " +
-		styleDim.Render("[?] unknown")
+		styleDim.Render("[?] unknown") + "  " +
+		styleDim.Render("[AR] archived")
 	cols := "cols: P=public repo   DEP=crit/high/mod/low   UNDEP=commits since last tag   PR=bot/human   CODE/SEC=open scan alerts (off=not enabled, ?=undetermined)"
 	keys := "j/k move   space/pgdn page   g/G top/bottom   enter drill   tab fold   / filter   s sort   a attn   o open   r refresh   q quit"
 	return styleFooter.Render("  ") + strings.Join(parts, "   ") + "\n" +

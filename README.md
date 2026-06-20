@@ -42,6 +42,7 @@ gh repos-hud serve --watch        # web dashboard that auto-refreshes (default: 
 gh repos-hud --json               # machine-readable snapshot
 gh repos-hud --org my-org         # limit to specific orgs (repeatable)
 gh repos-hud --only-attention     # only repos needing attention (non-green)
+gh repos-hud --archived           # include archived repos (hidden by default)
 gh repos-hud --watch              # TUI auto-refresh (default: manual 'r' only)
 gh repos-hud --demo               # synthetic data — try it without your own repos
 ```

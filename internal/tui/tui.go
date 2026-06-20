@@ -199,7 +199,9 @@ func (m *Model) rebuildRows() {
 		}
 		for _, ri := range sortedRepoIndices(o.Repos, m.sortBy) {
 			r := o.Repos[ri]
-			if m.onlyAttention && r.Health == model.HealthGreen {
+			// Archived repos are frozen, not attention-worthy, so attention
+			// mode hides them along with green ones.
+			if m.onlyAttention && (r.Health == model.HealthGreen || r.Archived) {
 				continue
 			}
 			if flt != "" && !strings.Contains(strings.ToLower(r.Name), flt) {

@@ -19,6 +19,7 @@ var (
 	flagOnlyAttention bool
 	flagNoCache       bool
 	flagDemo          bool
+	flagArchived      bool
 	flagOrgs          []string
 	flagRefresh       int // seconds
 )
@@ -51,6 +52,10 @@ func resolveOptions(cmd *cobra.Command) (ghclient.Options, time.Duration, int) {
 	opts.CacheTTL = time.Duration(cfg.CacheTTLSeconds) * time.Second
 	opts.NoCache = flagNoCache
 	opts.Demo = flagDemo
+	// --archived opts back in archived repos (hidden by default).
+	if flagArchived {
+		opts.ExcludeArchived = false
+	}
 
 	if cmd.Flags().Changed("org") {
 		opts.IncludeOrgs = flagOrgs
@@ -80,6 +85,7 @@ func init() {
 	f.BoolVar(&flagOnlyAttention, "only-attention", false, "show only repos needing attention (non-green)")
 	f.BoolVar(&flagNoCache, "no-cache", false, "bypass the short-TTL cache and re-fetch")
 	f.BoolVar(&flagDemo, "demo", false, "render a synthetic, fictional dataset (for screenshots / trying the HUD)")
+	f.BoolVar(&flagArchived, "archived", false, "include archived repos (excluded by default)")
 	f.StringSliceVar(&flagOrgs, "org", nil, "limit to these orgs (repeatable); default: all you belong to")
 	f.IntVar(&flagRefresh, "refresh", 30, "refresh interval in seconds (watch/serve)")
 }

@@ -43,8 +43,8 @@
           {{end}}{{end}}
         </td></tr>
         {{range .Repos}}
-        <tr class="h-{{.Health.String}}">
-          <td class="glyph">{{.Health.Glyph}}</td>
+        <tr class="h-{{.StatusName}}">
+          <td class="glyph">{{.StatusGlyph}}</td>
           <td class="repo"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Name}}</a>{{if not .Private}} <span class="pub">public</span>{{end}}</td>
           <td class="ci ci-{{.CI.String}}">{{.CI.Short}}</td>
           <td class="mono">{{.ShortSHA}}</td>

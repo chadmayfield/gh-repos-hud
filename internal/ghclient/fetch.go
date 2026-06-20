@@ -39,7 +39,9 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 	if opts.Demo {
 		return demoState(), nil
 	}
-	if !opts.NoCache && opts.CacheTTL > 0 {
+	// The on-disk cache only ever holds the default (archived-excluded) view,
+	// so --archived always fetches fresh and never reads or writes it.
+	if !opts.NoCache && opts.CacheTTL > 0 && opts.ExcludeArchived {
 		if st, ok := loadCache(opts.CacheTTL); ok {
 			return st, nil
 		}
@@ -94,7 +96,7 @@ func (c *Client) FetchState(ctx context.Context, opts Options) (*model.State, er
 	// Only cache a clean, unfiltered fetch — never a partial (rate-limited /
 	// per-owner-failed) or org-filtered run, so the default never serves a
 	// truncated snapshot later.
-	clean := len(opts.IncludeOrgs) == 0 && len(opts.ExcludeOrgs) == 0
+	clean := len(opts.IncludeOrgs) == 0 && len(opts.ExcludeOrgs) == 0 && opts.ExcludeArchived
 	for _, e := range ownerErrs {
 		if e != nil {
 			clean = false

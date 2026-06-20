@@ -44,6 +44,7 @@ tr.h-red .glyph { color: var(--red); }
 tr.h-yellow .glyph { color: var(--yellow); }
 tr.h-green .glyph { color: var(--green); }
 tr.h-gray .glyph { color: var(--muted); }
+tr.h-archived .glyph { color: var(--muted); }
 .ci-success { color: var(--green); }
 .ci-failure { color: var(--red); }
 .ci-pending { color: var(--yellow); }

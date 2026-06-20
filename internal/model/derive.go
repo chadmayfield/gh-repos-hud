@@ -25,6 +25,29 @@ func ComputeHealth(r Repo) Health {
 	return HealthGreen
 }
 
+// archivedGlyph marks archived repos in the status column, kept distinct from
+// the [?] used for unknown/degraded health: archived repos are frozen on
+// purpose, not undetermined.
+const archivedGlyph = "[AR]"
+
+// StatusGlyph is the marker for the health column: the health rollup glyph, or
+// [AR] for archived repos.
+func (r Repo) StatusGlyph() string {
+	if r.Archived {
+		return archivedGlyph
+	}
+	return r.Health.Glyph()
+}
+
+// StatusName is the lowercase status label (web CSS class, detail view):
+// "archived" for archived repos, otherwise the health name.
+func (r Repo) StatusName() string {
+	if r.Archived {
+		return "archived"
+	}
+	return r.Health.String()
+}
+
 // UndeployedLabel renders the undeployed-changes cell.
 func (r Repo) UndeployedLabel() string {
 	switch {

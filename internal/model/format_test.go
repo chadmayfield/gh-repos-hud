@@ -75,3 +75,16 @@ func TestAlertCountsTotal(t *testing.T) {
 		t.Error("empty AlertCounts Total should be 0")
 	}
 }
+
+func TestStatusGlyphAndName(t *testing.T) {
+	// Non-archived mirrors the health rollup.
+	r := Repo{Archived: false, Health: HealthRed}
+	if r.StatusGlyph() != "[!!]" || r.StatusName() != "red" {
+		t.Errorf("non-archived: glyph=%q name=%q", r.StatusGlyph(), r.StatusName())
+	}
+	// Archived gets the distinct [AR] marker regardless of health value.
+	a := Repo{Archived: true, Health: HealthGray}
+	if a.StatusGlyph() != "[AR]" || a.StatusName() != "archived" {
+		t.Errorf("archived: glyph=%q name=%q", a.StatusGlyph(), a.StatusName())
+	}
+}
