@@ -10,7 +10,7 @@ require (
 	github.com/cli/go-gh/v2 v2.16.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.25.0
 )
 
 require (
